@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Riordina Menu - Sunset Bar</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 1rem;
+    }
+
+    .header {
+      background: white;
+      padding: 1.5rem;
+      border-radius: 1rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .header h1 { font-size: 1.5rem; color: #2d3748; }
+    .btn-back {
+      padding: 0.8rem 1.5rem;
+      background: #667eea;
+      color: white;
+      border: none;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      font-weight: 600;
+      text-decoration: none;
+    }
+    .btn-back:hover {
+      background: #5568d3;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .info-box {
+      background: #fffbeb;
+      border: 2px solid #fbbf24;
+      border-radius: 0.8rem;
+      padding: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .info-box h3 {
+      color: #92400e;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .info-box p {
+      color: #78350f;
+      line-height: 1.5;
+    }
+
+    .categories-tabs {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+    .category-tab {
+      padding: 0.8rem 1.5rem;
+      background: white;
+      border: 2px solid #e2e8f0;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    .category-tab:hover {
+      border-color: #667eea;
+    }
+    .category-tab.active {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border-color: #667eea;
+    }
+
+    .articoli-section {
+      background: white;
+      border-radius: 1rem;
+      padding: 1.5rem;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .articoli-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+      padding-bottom: 1rem;
+      border-bottom: 2px solid #e2e8f0;
+    }
+    .articoli-title {
+      font-size: 1.3rem;
+      font-weight: bold;
+      color: #2d3748;
+    }
+    .btn-save {
+      padding: 0.8rem 1.5rem;
+      background: #48bb78;
+      color: white;
+      border: none;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 1rem;
+    }
+    .btn-save:hover {
+      background: #38a169;
+    }
+    .btn-save:disabled {
+      background: #cbd5e0;
+      cursor: not-allowed;
+    }
+
+    .articoli-list {
+      list-style: none;
+    }
+    .articolo-item {
+      background: #f7fafc;
+      border: 2px solid #e2e8f0;
+      border-radius: 0.8rem;
+      padding: 1rem;
+      margin-bottom: 0.8rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: move;
+      transition: all 0.2s;
+    }
+    .articolo-item:hover {
+      border-color: #667eea;
+      box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+    }
+    .articolo-item.dragging {
+      opacity: 0.5;
+      border-color: #667eea;
+      border-style: dashed;
+    }
+    .articolo-item.drag-over {
+      border-top: 3px solid #667eea;
+      margin-top: 1rem;
+    }
+
+    .articolo-info {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .articolo-handle {
+      font-size: 1.5rem;
+      color: #a0aec0;
+      cursor: grab;
+    }
+    .articolo-handle:active {
+      cursor: grabbing;
+    }
+    .articolo-order {
+      background: #667eea;
+      color: white;
+      padding: 0.3rem 0.8rem;
+      border-radius: 0.5rem;
+      font-weight: bold;
+      min-width: 2.5rem;
+      text-align: center;
+    }
+    .articolo-details {
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+    }
+    .articolo-nome {
+      font-weight: 600;
+      color: #2d3748;
+    }
+    .articolo-prezzo {
+      color: #667eea;
+      font-weight: 600;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 3rem;
+      color: #a0aec0;
+    }
+
+    .success-message {
+      position: fixed;
+      top: 1rem;
+      right: 1rem;
+      background: #48bb78;
+      color: white;
+      padding: 1rem 1.5rem;
+      border-radius: 0.5rem;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      display: none;
+      z-index: 1000;
+      animation: slideIn 0.3s ease;
+    }
+    .success-message.show {
+      display: block;
+    }
+
+    @keyframes slideIn {
+      from {
+        transform: translateX(400px);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .header {
+        flex-direction: column;
+        gap: 1rem;
+      }
+      .articolo-info {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🔧 Riordina Menu</h1>
+      <a href="/admin.html" class="btn-back">← Torna all'Admin</a>
+    </div>
+
+    <div class="info-box">
+      <h3>💡 Come funziona</h3>
+      <p>
+        <strong>Trascina gli articoli</strong> per cambiarli di posizione. L'ordine che imposti qui sarà quello
+        visualizzato nell'interfaccia di presa ordini. Gli articoli in alto verranno mostrati per primi.
+        Ricorda di cliccare <strong>"💾 Salva Ordine"</strong> quando hai finito!
+      </p>
+    </div>
+
+    <!-- Tabs categorie -->
+    <div class="categories-tabs" id="categories-tabs"></div>
+
+    <!-- Lista articoli -->
+    <div class="articoli-section">
+      <div class="articoli-header">
+        <div class="articoli-title" id="category-title">Caricamento...</div>
+        <button class="btn-save" id="btn-save" onclick="salvaOrdine()" disabled>
+          💾 Salva Ordine
+        </button>
+      </div>
+      <ul class="articoli-list" id="articoli-list">
+        <li class="empty-state">Seleziona una categoria</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="success-message" id="success-message">
+    ✅ Ordine salvato con successo!
+  </div>
+
+  <script>
+    let menuData = [];
+    let currentCategory = '';
+    let hasChanges = false;
+    let draggedElement = null;
+    let draggedIndex = null;
+
+    async function init() {
+      await loadMenu();
+    }
+
+    async function loadMenu() {
+      try {
+        const res = await fetch('/menu');
+        menuData = await res.json();
+        renderCategories();
+      } catch (e) {
+        console.error('Errore caricamento menu:', e);
+        alert('❌ Errore caricamento menu');
+      }
+    }
+
+    function renderCategories() {
+      const gruppi = [...new Set(menuData.map(item => item.gruppo))];
+      const container = document.getElementById('categories-tabs');
+      let html = '';
+      gruppi.forEach(gruppo => {
+        html += `<button class="category-tab ${gruppo === currentCategory ? 'active' : ''}"
+                  onclick="selectCategory('${gruppo}')">${gruppo}</button>`;
+      });
+      container.innerHTML = html;
+      if (!currentCategory && gruppi.length > 0) {
+        selectCategory(gruppi[0]);
+      }
+    }
+
+    function selectCategory(cat) {
+      currentCategory = cat;
+      hasChanges = false;
+      document.getElementById('btn-save').disabled = true;
+      renderCategories();
+      renderArticoli();
+    }
+
+    function renderArticoli() {
+      const items = menuData.filter(item => item.gruppo === currentCategory);
+      const list = document.getElementById('articoli-list');
+      const title = document.getElementById('category-title');
+
+      title.textContent = `${currentCategory} (${items.length} articoli)`;
+
+      if (items.length === 0) {
+        list.innerHTML = '<li class="empty-state">Nessun articolo in questa categoria</li>';
+        return;
+      }
+
+      let html = '';
+      items.forEach((item, index) => {
+        html += `
+          <li class="articolo-item"
+              draggable="true"
+              data-id="${item.id}"
+              data-index="${index}">
+            <div class="articolo-info">
+              <div class="articolo-handle">☰</div>
+              <div class="articolo-order">${index + 1}</div>
+              <div class="articolo-details">
+                <div class="articolo-nome">${item.nome}</div>
+                <div class="articolo-prezzo">€${item.prezzo.toFixed(2)}</div>
+              </div>
+            </div>
+          </li>`;
+      });
+      list.innerHTML = html;
+
+      // Aggiungi event listener per drag & drop
+      const articleItems = list.querySelectorAll('.articolo-item');
+      articleItems.forEach(item => {
+        item.addEventListener('dragstart', handleDragStart);
+        item.addEventListener('dragend', handleDragEnd);
+        item.addEventListener('dragover', handleDragOver);
+        item.addEventListener('drop', handleDrop);
+        item.addEventListener('dragleave', handleDragLeave);
+      });
+    }
+
+    function handleDragStart(e) {
+      draggedElement = e.target;
+      draggedIndex = parseInt(e.target.dataset.index);
+      e.target.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/html', e.target.innerHTML);
+    }
+
+    function handleDragEnd(e) {
+      e.target.classList.remove('dragging');
+      document.querySelectorAll('.articolo-item').forEach(item => {
+        item.classList.remove('drag-over');
+      });
+    }
+
+    function handleDragOver(e) {
+      if (e.preventDefault) {
+        e.preventDefault();
+      }
+      e.dataTransfer.dropEffect = 'move';
+
+      const target = e.target.closest('.articolo-item');
+      if (target && target !== draggedElement) {
+        target.classList.add('drag-over');
+      }
+
+      return false;
+    }
+
+    function handleDragLeave(e) {
+      e.target.closest('.articolo-item')?.classList.remove('drag-over');
+    }
+
+    function handleDrop(e) {
+      if (e.stopPropagation) {
+        e.stopPropagation();
+      }
+
+      const target = e.target.closest('.articolo-item');
+      if (!target || target === draggedElement) {
+        return false;
+      }
+
+      const targetIndex = parseInt(target.dataset.index);
+
+      // Riordina array menuData
+      const items = menuData.filter(item => item.gruppo === currentCategory);
+      const draggedItem = items[draggedIndex];
+
+      // Rimuovi item dalla posizione corrente
+      items.splice(draggedIndex, 1);
+
+      // Inserisci nella nuova posizione
+      const newIndex = draggedIndex < targetIndex ? targetIndex : targetIndex;
+      items.splice(newIndex, 0, draggedItem);
+
+      // Aggiorna menuData
+      menuData = menuData.filter(item => item.gruppo !== currentCategory).concat(items);
+
+      hasChanges = true;
+      document.getElementById('btn-save').disabled = false;
+
+      renderArticoli();
+
+      return false;
+    }
+
+    async function salvaOrdine() {
+      if (!hasChanges) return;
+
+      try {
+        // Prepara array con nuovi ordinamenti
+        const items = menuData.filter(item => item.gruppo === currentCategory);
+        const ordini = items.map((item, index) => ({
+          id: item.id,
+          ordinamento: index
+        }));
+
+        const res = await fetch('/menu/riordina', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ordini })
+        });
+
+        if (res.ok) {
+          // Mostra messaggio successo
+          const msg = document.getElementById('success-message');
+          msg.classList.add('show');
+          setTimeout(() => {
+            msg.classList.remove('show');
+          }, 3000);
+
+          hasChanges = false;
+          document.getElementById('btn-save').disabled = true;
+
+          // Ricarica menu per sincronizzare
+          await loadMenu();
+        } else {
+          alert('❌ Errore salvataggio');
+        }
+      } catch (e) {
+        console.error('Errore:', e);
+        alert('❌ Errore: ' + e.message);
+      }
+    }
+
+    // Previeni perdita dati
+    window.addEventListener('beforeunload', (e) => {
+      if (hasChanges) {
+        e.preventDefault();
+        e.returnValue = 'Hai modifiche non salvate. Vuoi davvero uscire?';
+      }
+    });
+
+    init();
+  </script>
+</body>
+</html>

@@ -1,0 +1,1532 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>Sunset Bar - Presa Ordini</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      overflow-x: hidden;
+      padding-bottom: 200px;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       HEADER
+    ═══════════════════════════════════════════════════════════ */
+    .header {
+      background: rgba(255,255,255,0.98);
+      padding: 1rem;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(10px);
+    }
+
+    .header-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+
+    .header h1 {
+      font-size: 1.5rem;
+      color: #2d3748;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .header-buttons {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .header-buttons button {
+      width: 3rem;
+      height: 3rem;
+      border: none;
+      border-radius: 0.8rem;
+      background: white;
+      border: 2px solid #e2e8f0;
+      font-size: 1.3rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .header-buttons button:active {
+      transform: scale(0.9);
+      background: #f7fafc;
+    }
+
+    /* Step indicator */
+    .step-indicator {
+      display: flex;
+      gap: 0.5rem;
+      padding: 0.8rem;
+      background: #f7fafc;
+      border-radius: 0.8rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    .step {
+      flex: 1;
+      padding: 0.5rem;
+      text-align: center;
+      border-radius: 0.5rem;
+      color: #a0aec0;
+      background: white;
+      border: 2px dashed #e2e8f0;
+    }
+
+    .step.active {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: 2px solid #667eea;
+    }
+
+    .step.completed {
+      background: #48bb78;
+      color: white;
+      border: 2px solid #48bb78;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       CONTAINER PRINCIPALE
+    ═══════════════════════════════════════════════════════════ */
+    .container {
+      padding: 1rem;
+    }
+
+    .section {
+      background: white;
+      border-radius: 1.2rem;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    }
+
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.2rem;
+      padding-bottom: 1rem;
+      border-bottom: 3px solid #f7fafc;
+    }
+
+    .section-title {
+      font-size: 1.4rem;
+      font-weight: bold;
+      color: #2d3748;
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+    }
+
+    .section-badge {
+      background: #667eea;
+      color: white;
+      padding: 0.3rem 0.8rem;
+      border-radius: 1rem;
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       SELEZIONE TAVOLO - SUPER CHIARA
+    ═══════════════════════════════════════════════════════════ */
+    .tavolo-selection {
+      text-align: center;
+    }
+
+    .tavolo-display-large {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 2rem;
+      border-radius: 1rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3);
+    }
+
+    .tavolo-label {
+      font-size: 0.9rem;
+      opacity: 0.9;
+      margin-bottom: 0.5rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .tavolo-numero {
+      font-size: 3.5rem;
+      font-weight: bold;
+      min-height: 4rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .tavolo-numero.empty {
+      color: rgba(255,255,255,0.5);
+      font-size: 2rem;
+    }
+
+    /* Sale compatte */
+    .sale-compact {
+      display: flex;
+      gap: 0.8rem;
+      overflow-x: auto;
+      padding: 0.5rem 0;
+      margin-bottom: 1rem;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .sale-compact::-webkit-scrollbar {
+      height: 4px;
+    }
+
+    .sala-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.8rem 1.2rem;
+      background: white;
+      border: 2px solid #e2e8f0;
+      border-radius: 2rem;
+      white-space: nowrap;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+
+    .sala-chip:active {
+      transform: scale(0.95);
+    }
+
+    .sala-chip.active {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border-color: #667eea;
+    }
+
+    /* Tastierino numerico */
+    .tastierino-numerico {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.8rem;
+      max-width: 320px;
+      margin: 0 auto;
+    }
+
+    .tastierino-btn {
+      aspect-ratio: 1;
+      border: 3px solid #e2e8f0;
+      border-radius: 1rem;
+      background: white;
+      font-size: 2.5rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+
+    .tastierino-btn:active {
+      background: #667eea;
+      color: white;
+      transform: scale(0.95);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    }
+
+    .tastierino-btn.cancel {
+      background: #fc8181;
+      color: white;
+      border-color: #fc8181;
+      font-size: 2rem;
+    }
+
+    .tastierino-btn.cancel:active {
+      background: #e35555;
+    }
+
+    .tastierino-btn.zero {
+      grid-column: span 2;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       CATEGORIE - SCROLL ORIZZONTALE CON ICONE
+    ═══════════════════════════════════════════════════════════ */
+    .categorie-scroll {
+      display: flex;
+      gap: 1rem;
+      overflow-x: auto;
+      padding: 0.5rem 0 1rem 0;
+      -webkit-overflow-scrolling: touch;
+      scroll-snap-type: x mandatory;
+    }
+
+    .categorie-scroll::-webkit-scrollbar {
+      height: 6px;
+    }
+
+    .categorie-scroll::-webkit-scrollbar-thumb {
+      background: #cbd5e0;
+      border-radius: 3px;
+    }
+
+    .category-card {
+      min-width: 140px;
+      padding: 1.2rem;
+      background: white;
+      border: 3px solid #e2e8f0;
+      border-radius: 1rem;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s;
+      scroll-snap-align: start;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+
+    .category-card:active {
+      transform: translateY(-4px);
+    }
+
+    .category-card.active {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border-color: #667eea;
+      box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3);
+    }
+
+    .category-icon {
+      font-size: 2.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .category-name {
+      font-weight: 600;
+      font-size: 0.9rem;
+      line-height: 1.3;
+    }
+
+    .category-count {
+      font-size: 0.75rem;
+      margin-top: 0.3rem;
+      opacity: 0.7;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       ARTICOLI - CARD PIÙ GRANDI E LEGGIBILI
+    ═══════════════════════════════════════════════════════════ */
+    .articoli-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1rem;
+    }
+
+    .articolo-card {
+      background: white;
+      border: 3px solid #e2e8f0;
+      border-radius: 1rem;
+      padding: 1.2rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+
+    .articolo-card:active {
+      transform: scale(0.97);
+      border-color: #667eea;
+      box-shadow: 0 4px 16px rgba(102, 126, 234, 0.2);
+    }
+
+    .articolo-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .articolo-card:active::before {
+      opacity: 1;
+    }
+
+    .articolo-nome {
+      font-weight: 700;
+      font-size: 1.05rem;
+      color: #2d3748;
+      margin-bottom: 0.8rem;
+      min-height: 2.5em;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1.3;
+    }
+
+    .articolo-prezzo {
+      color: #667eea;
+      font-weight: bold;
+      font-size: 1.3rem;
+    }
+
+    .empty-articoli {
+      text-align: center;
+      padding: 3rem 1rem;
+      color: #a0aec0;
+      font-size: 1.1rem;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       CARRELLO FISSO IN BASSO
+    ═══════════════════════════════════════════════════════════ */
+    .carrello-fisso {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: white;
+      border-radius: 1.5rem 1.5rem 0 0;
+      box-shadow: 0 -4px 24px rgba(0,0,0,0.2);
+      max-height: 60vh;
+      display: flex;
+      flex-direction: column;
+      z-index: 200;
+      transition: transform 0.3s;
+    }
+
+    .carrello-handle {
+      padding: 0.8rem;
+      cursor: pointer;
+      text-align: center;
+      border-bottom: 2px solid #f7fafc;
+    }
+
+    .carrello-handle-bar {
+      width: 60px;
+      height: 5px;
+      background: #cbd5e0;
+      border-radius: 3px;
+      margin: 0 auto;
+    }
+
+    .carrello-header-info {
+      padding: 1rem 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 3px solid #f7fafc;
+      background: #f7fafc;
+    }
+
+    .carrello-title-large {
+      font-size: 1.3rem;
+      font-weight: bold;
+      color: #2d3748;
+    }
+
+    .carrello-items-count {
+      background: #667eea;
+      color: white;
+      padding: 0.4rem 0.9rem;
+      border-radius: 1rem;
+      font-weight: bold;
+      font-size: 1rem;
+    }
+
+    .carrello-items-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1rem;
+    }
+
+    .carrello-item-card {
+      background: #f7fafc;
+      border: 2px solid #e2e8f0;
+      border-radius: 1rem;
+      padding: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .item-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      margin-bottom: 0.8rem;
+    }
+
+    .item-card-name {
+      font-weight: 700;
+      font-size: 1.05rem;
+      color: #2d3748;
+      flex: 1;
+    }
+
+    .item-card-price {
+      color: #667eea;
+      font-weight: bold;
+      font-size: 1.2rem;
+      margin-left: 1rem;
+    }
+
+    .item-card-notes {
+      font-size: 0.85rem;
+      color: #718096;
+      margin-bottom: 0.8rem;
+      line-height: 1.5;
+    }
+
+    .item-card-controls {
+      display: flex;
+      gap: 0.8rem;
+      align-items: center;
+    }
+
+    .qty-control {
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      background: white;
+      padding: 0.5rem;
+      border-radius: 0.8rem;
+      border: 2px solid #e2e8f0;
+    }
+
+    .qty-btn {
+      width: 2.5rem;
+      height: 2.5rem;
+      border: none;
+      border-radius: 0.6rem;
+      background: #667eea;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 1.3rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .qty-btn:active {
+      transform: scale(0.9);
+    }
+
+    .qty-number {
+      font-weight: bold;
+      font-size: 1.2rem;
+      min-width: 2rem;
+      text-align: center;
+    }
+
+    .item-actions {
+      display: flex;
+      gap: 0.5rem;
+      margin-left: auto;
+    }
+
+    .btn-icon {
+      width: 2.5rem;
+      height: 2.5rem;
+      border: none;
+      border-radius: 0.6rem;
+      background: white;
+      border: 2px solid #e2e8f0;
+      cursor: pointer;
+      font-size: 1.2rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .btn-icon:active {
+      transform: scale(0.9);
+    }
+
+    .btn-icon.delete {
+      background: #fc8181;
+      border-color: #fc8181;
+      color: white;
+    }
+
+    .carrello-footer {
+      padding: 1.5rem;
+      border-top: 3px solid #e2e8f0;
+      background: white;
+    }
+
+    .totale-large {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: #2d3748;
+    }
+
+    .totale-amount {
+      color: #667eea;
+      font-size: 2rem;
+    }
+
+    .btn-invia-large {
+      width: 100%;
+      padding: 1.2rem;
+      background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+      color: white;
+      border: none;
+      border-radius: 1rem;
+      font-weight: bold;
+      font-size: 1.3rem;
+      cursor: pointer;
+      box-shadow: 0 4px 16px rgba(72, 187, 120, 0.3);
+      transition: all 0.2s;
+    }
+
+    .btn-invia-large:active {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(72, 187, 120, 0.4);
+    }
+
+    .btn-invia-large:disabled {
+      background: #cbd5e0;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    .empty-carrello {
+      text-align: center;
+      padding: 3rem 1rem;
+      color: #a0aec0;
+      font-size: 1rem;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       MODAL PERSONALIZZAZIONE
+    ═══════════════════════════════════════════════════════════ */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 300;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+
+    .modal-overlay.show {
+      display: flex;
+    }
+
+    .modal-box {
+      background: white;
+      border-radius: 1.5rem;
+      max-width: 500px;
+      width: 100%;
+      max-height: 85vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+
+    .modal-header {
+      padding: 1.5rem;
+      border-bottom: 3px solid #f7fafc;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-title {
+      font-size: 1.4rem;
+      font-weight: bold;
+      color: #2d3748;
+    }
+
+    .btn-close-modal {
+      width: 3rem;
+      height: 3rem;
+      border: none;
+      background: #f7fafc;
+      border-radius: 0.8rem;
+      font-size: 1.8rem;
+      cursor: pointer;
+      color: #a0aec0;
+    }
+
+    .btn-close-modal:active {
+      background: #e2e8f0;
+    }
+
+    .modal-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1.5rem;
+    }
+
+    .personalizza-group {
+      margin-bottom: 1.5rem;
+    }
+
+    .personalizza-group h3 {
+      font-size: 1.1rem;
+      margin-bottom: 0.8rem;
+      color: #2d3748;
+    }
+
+    .option-item {
+      padding: 1rem;
+      border: 2px solid #e2e8f0;
+      border-radius: 0.8rem;
+      margin-bottom: 0.8rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: white;
+    }
+
+    .option-item:active {
+      transform: scale(0.98);
+    }
+
+    .option-item.selected {
+      background: #667eea;
+      color: white;
+      border-color: #667eea;
+    }
+
+    .note-textarea {
+      width: 100%;
+      padding: 1rem;
+      border: 2px solid #e2e8f0;
+      border-radius: 0.8rem;
+      font-size: 1rem;
+      font-family: inherit;
+      resize: vertical;
+      min-height: 100px;
+    }
+
+    .note-textarea:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .modal-footer {
+      padding: 1.5rem;
+      border-top: 3px solid #f7fafc;
+    }
+
+    .btn-conferma-modal {
+      width: 100%;
+      padding: 1.2rem;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 1rem;
+      font-weight: bold;
+      font-size: 1.2rem;
+      cursor: pointer;
+    }
+
+    .btn-conferma-modal:active {
+      transform: scale(0.98);
+    }
+
+    /* Toast notifiche */
+    .toast {
+      position: fixed;
+      top: 5rem;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #48bb78;
+      color: white;
+      padding: 1rem 1.5rem;
+      border-radius: 1rem;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+      z-index: 400;
+      display: none;
+      font-weight: 600;
+    }
+
+    .toast.show {
+      display: block;
+      animation: slideDown 0.3s ease;
+    }
+
+    @keyframes slideDown {
+      from {
+        transform: translateX(-50%) translateY(-100px);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(-50%) translateY(0);
+        opacity: 1;
+      }
+    }
+
+    /* Responsive */
+    @media (max-width: 400px) {
+      .articoli-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-top">
+      <h1>🌅 Sunset Bar</h1>
+      <div class="header-buttons">
+        <button onclick="location.href='tablet.html'" title="Vista Tablet">💻</button>
+        <button onclick="location.href='/history.html'" title="Ordini Attivi">📋</button>
+        <button onclick="location.href='/admin.html'" title="Admin">⚙️</button>
+      </div>
+    </div>
+
+    <!-- STEP INDICATOR -->
+    <div class="step-indicator">
+      <div class="step" id="step-tavolo">1️⃣ Tavolo</div>
+      <div class="step" id="step-categoria">2️⃣ Categoria</div>
+      <div class="step" id="step-articoli">3️⃣ Ordine</div>
+    </div>
+  </div>
+
+  <div class="container">
+    <!-- ═══════════════════════════════════════════════════════════
+         SEZIONE 1: SELEZIONE TAVOLO
+    ═══════════════════════════════════════════════════════════ -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-title">
+          <span>🪑</span>
+          <span>Seleziona Tavolo</span>
+        </div>
+      </div>
+
+      <div class="tavolo-selection">
+        <div class="tavolo-display-large" id="tavolo-display-large">
+          <div class="tavolo-label">Tavolo Numero</div>
+          <div class="tavolo-numero empty" id="tavolo-numero">--</div>
+        </div>
+
+        <!-- Sale chips -->
+        <div class="sale-compact" id="sale-chips"></div>
+
+        <!-- Tastierino numerico -->
+        <div class="tastierino-numerico">
+          <button class="tastierino-btn" onclick="digitaTavolo('1')">1</button>
+          <button class="tastierino-btn" onclick="digitaTavolo('2')">2</button>
+          <button class="tastierino-btn" onclick="digitaTavolo('3')">3</button>
+          <button class="tastierino-btn" onclick="digitaTavolo('4')">4</button>
+          <button class="tastierino-btn" onclick="digitaTavolo('5')">5</button>
+          <button class="tastierino-btn" onclick="digitaTavolo('6')">6</button>
+          <button class="tastierino-btn" onclick="digitaTavolo('7')">7</button>
+          <button class="tastierino-btn" onclick="digitaTavolo('8')">8</button>
+          <button class="tastierino-btn" onclick="digitaTavolo('9')">9</button>
+          <button class="tastierino-btn zero" onclick="digitaTavolo('0')">0</button>
+          <button class="tastierino-btn cancel" onclick="cancellaTavolo()">←</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         SEZIONE 2: CATEGORIE
+    ═══════════════════════════════════════════════════════════ -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-title">
+          <span>📂</span>
+          <span>Categorie Menu</span>
+        </div>
+        <div class="section-badge" id="categorie-count">0</div>
+      </div>
+
+      <div class="categorie-scroll" id="categorie-scroll">
+        <!-- Popolato da JS -->
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         SEZIONE 3: ARTICOLI
+    ═══════════════════════════════════════════════════════════ -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-title">
+          <span>🍽️</span>
+          <span id="articoli-title">Articoli</span>
+        </div>
+        <div class="section-badge" id="articoli-count">0</div>
+      </div>
+
+      <div class="articoli-grid" id="articoli-grid">
+        <div class="empty-articoli">Seleziona una categoria</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       CARRELLO FISSO
+  ═══════════════════════════════════════════════════════════ -->
+  <div class="carrello-fisso" id="carrello-fisso">
+    <div class="carrello-handle" onclick="toggleCarrello()">
+      <div class="carrello-handle-bar"></div>
+    </div>
+
+    <div class="carrello-header-info">
+      <div class="carrello-title-large">🛒 Carrello</div>
+      <div class="carrello-items-count" id="carrello-badge">0</div>
+    </div>
+
+    <div class="carrello-items-list" id="carrello-items-list">
+      <div class="empty-carrello">Nessun articolo nel carrello</div>
+    </div>
+
+    <div class="carrello-footer">
+      <div class="totale-large">
+        <span>TOTALE</span>
+        <span class="totale-amount" id="totale-amount">€0.00</span>
+      </div>
+      <button class="btn-invia-large" id="btn-invia" onclick="inviaOrdine()" disabled>
+        📤 INVIA ORDINE
+      </button>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       MODAL PERSONALIZZAZIONE
+  ═══════════════════════════════════════════════════════════ -->
+  <div class="modal-overlay" id="modal-personalizza">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div class="modal-title" id="modal-title">Personalizza</div>
+        <button class="btn-close-modal" onclick="chiudiModal()">×</button>
+      </div>
+      <div class="modal-body" id="modal-body">
+        <!-- Popolato da JS -->
+      </div>
+      <div class="modal-footer">
+        <button class="btn-conferma-modal" onclick="confermaPersonalizzazione()">
+          ✅ CONFERMA
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST -->
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // ═══════════════════════════════════════════════════════════
+    // STATE
+    // ═══════════════════════════════════════════════════════════
+    let tavoloSelezionato = '';
+    let inputTavolo = '';
+    let saleData = [];
+    let menuData = [];
+    let aggiunte = {};
+    let rimozioni = {};
+    let categoriaSelezionata = '';
+    let carrello = [];
+    let itemInEdit = null;
+
+    // Icons per categorie (personalizzabili)
+    const CATEGORY_ICONS = {
+      'CAFFE': '☕',
+      'CAFFETTERIA': '☕',
+      'BEVANDE CALDE': '☕',
+      'BEVANDE': '🥤',
+      'BEVANDE FREDDE': '🥤',
+      'BIBITE': '🥤',
+      'COCKTAIL': '🍹',
+      'APERITIVI': '🍹',
+      'VINI': '🍷',
+      'BIRRE': '🍺',
+      'BIRRA': '🍺',
+      'TOAST': '🥪',
+      'PANINI': '🥪',
+      'HAMBURGER': '🍔',
+      'BURGER': '🍔',
+      'PIZZA': '🍕',
+      'PIZZE': '🍕',
+      'PIADINE': '🌯',
+      'BRUSCHETTE': '🥖',
+      'DOLCI': '🍰',
+      'GELATI': '🍨',
+      'CONTORNI': '🥗',
+      'INSALATE': '🥗',
+      'ALTRO': '📦'
+    };
+
+    function getCategoryIcon(categoryName) {
+      const name = categoryName.toUpperCase();
+      for (let key in CATEGORY_ICONS) {
+        if (name.includes(key)) {
+          return CATEGORY_ICONS[key];
+        }
+      }
+      return '🍽️';
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // INIT
+    // ═══════════════════════════════════════════════════════════
+    async function init() {
+      await Promise.all([
+        loadSale(),
+        loadMenu(),
+        loadAggiunte(),
+        loadRimozioni()
+      ]);
+      updateSteps();
+    }
+
+    async function loadSale() {
+      try {
+        const res = await fetch('/api/configurazione-sale');
+        saleData = await res.json();
+        renderSaleChips();
+      } catch (e) {
+        console.error('Errore caricamento sale:', e);
+      }
+    }
+
+    async function loadMenu() {
+      try {
+        const res = await fetch('/menu');
+        menuData = await res.json();
+        renderCategorie();
+      } catch (e) {
+        console.error('Errore caricamento menu:', e);
+      }
+    }
+
+    async function loadAggiunte() {
+      try {
+        const res = await fetch('/api/aggiunte');
+        aggiunte = await res.json();
+      } catch (e) {
+        console.error('Errore caricamento aggiunte:', e);
+      }
+    }
+
+    async function loadRimozioni() {
+      try {
+        const res = await fetch('/api/rimozioni');
+        rimozioni = await res.json();
+      } catch (e) {
+        console.error('Errore caricamento rimozioni:', e);
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // TAVOLO
+    // ═══════════════════════════════════════════════════════════
+    function renderSaleChips() {
+      const container = document.getElementById('sale-chips');
+      let html = '';
+      saleData.forEach(sala => {
+        html += `<div class="sala-chip" onclick="selezionaSala('${sala.codice_sala}')">
+          ${sala.icona} ${sala.nome_sala}
+        </div>`;
+      });
+      container.innerHTML = html;
+    }
+
+    function selezionaSala(codice) {
+      // Evidenzia sala
+      document.querySelectorAll('.sala-chip').forEach(chip => {
+        chip.classList.remove('active');
+      });
+      event.target.classList.add('active');
+
+      // Scroll a tastierino
+      document.querySelector('.tastierino-numerico').scrollIntoView({
+        behavior: 'smooth',
+        block: 'center'
+      });
+    }
+
+    function digitaTavolo(digit) {
+      if (inputTavolo.length >= 3) return;
+      inputTavolo += digit;
+      aggiornaDisplayTavolo();
+    }
+
+    function cancellaTavolo() {
+      if (inputTavolo.length > 0) {
+        inputTavolo = inputTavolo.slice(0, -1);
+        aggiornaDisplayTavolo();
+      }
+    }
+
+    function aggiornaDisplayTavolo() {
+      const display = document.getElementById('tavolo-numero');
+      if (inputTavolo) {
+        display.textContent = inputTavolo;
+        display.classList.remove('empty');
+        tavoloSelezionato = inputTavolo;
+      } else {
+        display.textContent = '--';
+        display.classList.add('empty');
+        tavoloSelezionato = '';
+      }
+      updateSteps();
+      updateCarrello();
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // CATEGORIE
+    // ═══════════════════════════════════════════════════════════
+    function renderCategorie() {
+      const gruppi = [...new Set(menuData.map(item => item.gruppo))];
+      const container = document.getElementById('categorie-scroll');
+      document.getElementById('categorie-count').textContent = gruppi.length;
+
+      let html = '';
+      gruppi.forEach(gruppo => {
+        const count = menuData.filter(i => i.gruppo === gruppo).length;
+        const icon = getCategoryIcon(gruppo);
+        const active = gruppo === categoriaSelezionata ? 'active' : '';
+
+        html += `
+          <div class="category-card ${active}" onclick="selezionaCategoria('${gruppo}')">
+            <div class="category-icon">${icon}</div>
+            <div class="category-name">${gruppo}</div>
+            <div class="category-count">${count} articoli</div>
+          </div>`;
+      });
+      container.innerHTML = html;
+
+      if (!categoriaSelezionata && gruppi.length > 0) {
+        selezionaCategoria(gruppi[0]);
+      }
+    }
+
+    function selezionaCategoria(categoria) {
+      categoriaSelezionata = categoria;
+      renderCategorie();
+      renderArticoli();
+      updateSteps();
+
+      // Scroll agli articoli
+      setTimeout(() => {
+        document.getElementById('articoli-grid').scrollIntoView({
+          behavior: 'smooth',
+          block: 'start'
+        });
+      }, 100);
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // ARTICOLI
+    // ═══════════════════════════════════════════════════════════
+    function renderArticoli() {
+      const items = menuData.filter(i => i.gruppo === categoriaSelezionata);
+      const container = document.getElementById('articoli-grid');
+      const title = document.getElementById('articoli-title');
+      const count = document.getElementById('articoli-count');
+
+      title.textContent = categoriaSelezionata || 'Articoli';
+      count.textContent = items.length;
+
+      if (items.length === 0) {
+        container.innerHTML = '<div class="empty-articoli">Nessun articolo in questa categoria</div>';
+        return;
+      }
+
+      let html = '';
+      items.forEach(item => {
+        html += `
+          <div class="articolo-card" onclick='aggiungiAlCarrello(${JSON.stringify(item)})'>
+            <div class="articolo-nome">${item.nome}</div>
+            <div class="articolo-prezzo">€${item.prezzo.toFixed(2)}</div>
+          </div>`;
+      });
+      container.innerHTML = html;
+    }
+
+    function aggiungiAlCarrello(item) {
+      if (!tavoloSelezionato) {
+        mostraToast('⚠️ Seleziona prima un tavolo!', '#f59e0b');
+        document.querySelector('.tavolo-display-large').scrollIntoView({
+          behavior: 'smooth',
+          block: 'center'
+        });
+        return;
+      }
+
+      const existing = carrello.find(c =>
+        c.id === item.id &&
+        JSON.stringify(c.aggiunte || []) === '[]' &&
+        JSON.stringify(c.rimozioni || []) === '[]' &&
+        !c.note
+      );
+
+      if (existing) {
+        existing.qty++;
+      } else {
+        carrello.push({
+          ...item,
+          qty: 1,
+          aggiunte: [],
+          rimozioni: [],
+          note: ''
+        });
+      }
+
+      mostraToast(`✅ ${item.nome} aggiunto!`, '#48bb78');
+      updateCarrello();
+      updateSteps();
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // CARRELLO
+    // ═══════════════════════════════════════════════════════════
+    function toggleCarrello() {
+      const carrello = document.getElementById('carrello-fisso');
+      // In questa versione è sempre visibile, ma potresti aggiungere logica
+    }
+
+    function updateCarrello() {
+      const container = document.getElementById('carrello-items-list');
+      const badge = document.getElementById('carrello-badge');
+      const btnInvia = document.getElementById('btn-invia');
+      const totaleEl = document.getElementById('totale-amount');
+
+      badge.textContent = carrello.length;
+
+      if (carrello.length === 0) {
+        container.innerHTML = '<div class="empty-carrello">Nessun articolo nel carrello</div>';
+        btnInvia.disabled = true;
+        totaleEl.textContent = '€0.00';
+        return;
+      }
+
+      let html = '';
+      let totale = 0;
+
+      carrello.forEach((item, index) => {
+        const prezzoBase = item.prezzo * item.qty;
+        const costoAggiunte = (item.aggiunte || []).reduce((sum, a) => sum + (a.prezzo * item.qty), 0);
+        const totaleItem = prezzoBase + costoAggiunte;
+        totale += totaleItem;
+
+        let notes = '';
+        if (item.aggiunte && item.aggiunte.length > 0) {
+          notes += `<div>➕ ${item.aggiunte.map(a => a.nome).join(', ')}</div>`;
+        }
+        if (item.rimozioni && item.rimozioni.length > 0) {
+          notes += `<div>➖ ${item.rimozioni.map(r => r.nome).join(', ')}</div>`;
+        }
+        if (item.note) {
+          notes += `<div>📝 ${item.note}</div>`;
+        }
+
+        html += `
+          <div class="carrello-item-card">
+            <div class="item-card-header">
+              <div class="item-card-name">${item.nome}</div>
+              <div class="item-card-price">€${totaleItem.toFixed(2)}</div>
+            </div>
+            ${notes ? `<div class="item-card-notes">${notes}</div>` : ''}
+            <div class="item-card-controls">
+              <div class="qty-control">
+                <button class="qty-btn" onclick="modificaQty(${index}, -1)">−</button>
+                <div class="qty-number">${item.qty}</div>
+                <button class="qty-btn" onclick="modificaQty(${index}, 1)">+</button>
+              </div>
+              <div class="item-actions">
+                <button class="btn-icon" onclick="personalizzaItem(${index})" title="Personalizza">
+                  🎨
+                </button>
+                <button class="btn-icon delete" onclick="rimuoviItem(${index})" title="Rimuovi">
+                  🗑️
+                </button>
+              </div>
+            </div>
+          </div>`;
+      });
+
+      container.innerHTML = html;
+      totaleEl.textContent = `€${totale.toFixed(2)}`;
+      btnInvia.disabled = !tavoloSelezionato || carrello.length === 0;
+    }
+
+    function modificaQty(index, delta) {
+      carrello[index].qty += delta;
+      if (carrello[index].qty <= 0) {
+        carrello.splice(index, 1);
+      }
+      updateCarrello();
+    }
+
+    function rimuoviItem(index) {
+      if (confirm('Rimuovere questo articolo dal carrello?')) {
+        carrello.splice(index, 1);
+        updateCarrello();
+        updateSteps();
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // PERSONALIZZAZIONE
+    // ═══════════════════════════════════════════════════════════
+    function personalizzaItem(index) {
+      itemInEdit = index;
+      const item = carrello[index];
+
+      document.getElementById('modal-title').textContent = `Personalizza: ${item.nome}`;
+
+      let html = '';
+
+      // Aggiunte
+      if (Object.keys(aggiunte).length > 0) {
+        html += '<div class="personalizza-group"><h3>➕ Aggiunte</h3>';
+        Object.keys(aggiunte).forEach(cat => {
+          aggiunte[cat].forEach(agg => {
+            const isSelected = (item.aggiunte || []).some(a => a.id === agg.id);
+            html += `<div class="option-item ${isSelected ? 'selected' : ''}"
+                      onclick="toggleAggiunta(${agg.id}, '${agg.nome}', ${agg.prezzo})">
+                      ${agg.nome} <strong>+€${agg.prezzo.toFixed(2)}</strong>
+                    </div>`;
+          });
+        });
+        html += '</div>';
+      }
+
+      // Rimozioni
+      if (Object.keys(rimozioni).length > 0) {
+        html += '<div class="personalizza-group"><h3>➖ Rimozioni</h3>';
+        Object.keys(rimozioni).forEach(cat => {
+          rimozioni[cat].forEach(rim => {
+            const isSelected = (item.rimozioni || []).some(r => r.id === rim.id);
+            html += `<div class="option-item ${isSelected ? 'selected' : ''}"
+                      onclick="toggleRimozione(${rim.id}, '${rim.nome}')">
+                      ${rim.nome}
+                    </div>`;
+          });
+        });
+        html += '</div>';
+      }
+
+      // Note
+      html += `
+        <div class="personalizza-group">
+          <h3>📝 Note Aggiuntive</h3>
+          <textarea class="note-textarea" id="note-textarea"
+            placeholder="Es: poco sale, ben cotto, ecc...">${item.note || ''}</textarea>
+        </div>`;
+
+      document.getElementById('modal-body').innerHTML = html;
+      document.getElementById('modal-personalizza').classList.add('show');
+    }
+
+    function toggleAggiunta(id, nome, prezzo) {
+      const item = carrello[itemInEdit];
+      if (!item.aggiunte) item.aggiunte = [];
+
+      const index = item.aggiunte.findIndex(a => a.id === id);
+      if (index >= 0) {
+        item.aggiunte.splice(index, 1);
+      } else {
+        item.aggiunte.push({ id, nome, prezzo });
+      }
+
+      personalizzaItem(itemInEdit);
+    }
+
+    function toggleRimozione(id, nome) {
+      const item = carrello[itemInEdit];
+      if (!item.rimozioni) item.rimozioni = [];
+
+      const index = item.rimozioni.findIndex(r => r.id === id);
+      if (index >= 0) {
+        item.rimozioni.splice(index, 1);
+      } else {
+        item.rimozioni.push({ id, nome });
+      }
+
+      personalizzaItem(itemInEdit);
+    }
+
+    function confermaPersonalizzazione() {
+      const note = document.getElementById('note-textarea').value.trim();
+      carrello[itemInEdit].note = note;
+      chiudiModal();
+      updateCarrello();
+      mostraToast('✅ Personalizzazione salvata!', '#48bb78');
+    }
+
+    function chiudiModal() {
+      document.getElementById('modal-personalizza').classList.remove('show');
+      itemInEdit = null;
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // INVIO ORDINE
+    // ═══════════════════════════════════════════════════════════
+    async function inviaOrdine() {
+      if (!tavoloSelezionato || carrello.length === 0) return;
+
+      if (!confirm(`Confermi l'invio dell'ordine per il Tavolo ${tavoloSelezionato}?`)) {
+        return;
+      }
+
+      let testo = '';
+      carrello.forEach(item => {
+        const prezzoBase = item.prezzo * item.qty;
+        const costoAggiunte = (item.aggiunte || []).reduce((sum, a) => sum + (a.prezzo * item.qty), 0);
+        const totaleItem = prezzoBase + costoAggiunte;
+
+        let riga = `${item.qty}× ${item.nome}`;
+
+        if ((item.aggiunte && item.aggiunte.length > 0) ||
+            (item.rimozioni && item.rimozioni.length > 0) ||
+            item.note) {
+          const details = [];
+          if (item.aggiunte && item.aggiunte.length > 0) {
+            details.push(`+ ${item.aggiunte.map(a => a.nome).join(', ')}`);
+          }
+          if (item.rimozioni && item.rimozioni.length > 0) {
+            details.push(`− ${item.rimozioni.map(r => r.nome).join(', ')}`);
+          }
+          if (item.note) {
+            details.push(item.note);
+          }
+          riga += ` (${details.join(' | ')})`;
+        }
+
+        riga += ` – €${totaleItem.toFixed(2)}`;
+        testo += riga + '\n';
+      });
+
+      try {
+        const res = await fetch('/orders', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tavolo: tavoloSelezionato,
+            comanda: testo,
+            items: carrello.map(item => ({
+              id: item.id,
+              nome: item.nome,
+              gruppo: item.gruppo,
+              prezzo: item.prezzo,
+              qty: item.qty,
+              note: [
+                ...((item.aggiunte || []).map(a => `+ ${a.nome}`)),
+                ...((item.rimozioni || []).map(r => `− ${r.nome}`)),
+                item.note
+              ].filter(Boolean).join(' | ')
+            }))
+          })
+        });
+
+        if (res.ok) {
+          mostraToast('✅ Ordine inviato con successo!', '#48bb78');
+
+          // Reset
+          carrello = [];
+          tavoloSelezionato = '';
+          inputTavolo = '';
+          categoriaSelezionata = '';
+
+          aggiornaDisplayTavolo();
+          updateCarrello();
+          renderCategorie();
+          renderArticoli();
+          updateSteps();
+
+          // Scroll in alto
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        } else {
+          mostraToast('❌ Errore invio ordine', '#fc8181');
+        }
+      } catch (e) {
+        console.error('Errore:', e);
+        mostraToast('❌ Errore: ' + e.message, '#fc8181');
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // STEP INDICATOR
+    // ═══════════════════════════════════════════════════════════
+    function updateSteps() {
+      const stepTavolo = document.getElementById('step-tavolo');
+      const stepCategoria = document.getElementById('step-categoria');
+      const stepArticoli = document.getElementById('step-articoli');
+
+      // Reset
+      [stepTavolo, stepCategoria, stepArticoli].forEach(s => {
+        s.classList.remove('active', 'completed');
+      });
+
+      // Tavolo
+      if (tavoloSelezionato) {
+        stepTavolo.classList.add('completed');
+      } else {
+        stepTavolo.classList.add('active');
+      }
+
+      // Categoria
+      if (tavoloSelezionato && categoriaSelezionata) {
+        stepCategoria.classList.add('completed');
+      } else if (tavoloSelezionato) {
+        stepCategoria.classList.add('active');
+      }
+
+      // Articoli
+      if (tavoloSelezionato && categoriaSelezionata && carrello.length > 0) {
+        stepArticoli.classList.add('completed');
+      } else if (tavoloSelezionato && categoriaSelezionata) {
+        stepArticoli.classList.add('active');
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // TOAST
+    // ═══════════════════════════════════════════════════════════
+    function mostraToast(message, color = '#48bb78') {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.style.background = color;
+      toast.classList.add('show');
+
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, 3000);
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // START
+    // ═══════════════════════════════════════════════════════════
+    init();
+  </script>
+</body>
+</html>

@@ -68,6 +68,7 @@ class Voce(db.Model):
     nome = db.Column(db.String(100), nullable=False)
     prezzo = db.Column(db.Float, nullable=False)
     destinazione_stampa = db.Column(db.String(20), default='cucina', nullable=False)
+    ordinamento = db.Column(db.Integer, default=0)
 
 class Comanda(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -184,14 +185,20 @@ def migrate_database():
         with db.engine.connect() as conn:
             result = conn.execute(db.text("PRAGMA table_info(voce)"))
             columns = [row[1] for row in result]
-            
+
             if 'destinazione_stampa' not in columns:
                 logging.info("Aggiunta colonna destinazione_stampa")
                 conn.execute(db.text("ALTER TABLE voce ADD COLUMN destinazione_stampa VARCHAR(20) DEFAULT 'cucina'"))
                 for gruppo in CUCINA_GROUPS:
                     conn.execute(db.text("UPDATE voce SET destinazione_stampa = 'cucina' WHERE gruppo = :gruppo"), {"gruppo": gruppo})
                 conn.commit()
-                logging.info("✓ Migrazione completata")
+                logging.info("✓ Migrazione destinazione_stampa completata")
+
+            if 'ordinamento' not in columns:
+                logging.info("Aggiunta colonna ordinamento")
+                conn.execute(db.text("ALTER TABLE voce ADD COLUMN ordinamento INTEGER DEFAULT 0"))
+                conn.commit()
+                logging.info("✓ Migrazione ordinamento completata")
     except Exception as e:
         logging.error(f"Errore migrazione: {e}")
 
@@ -390,13 +397,14 @@ threading.Thread(target=schedule_cleanup, daemon=True).start()
 # ══════════════════════════════════════════════════════════════════════════════
 @app.route("/menu", methods=["GET"])
 def menu_get():
-    rows = Voce.query.order_by(Voce.gruppo, Voce.nome).all()
+    rows = Voce.query.order_by(Voce.gruppo, Voce.ordinamento, Voce.nome).all()
     return jsonify([{
         "id": x.id,
         "gruppo": x.gruppo,
         "nome": x.nome,
         "prezzo": x.prezzo,
-        "destinazione_stampa": x.destinazione_stampa
+        "destinazione_stampa": x.destinazione_stampa,
+        "ordinamento": x.ordinamento
     } for x in rows])
 
 @app.route("/menu", methods=["POST"])
@@ -432,6 +440,25 @@ def menu_del(vid):
     db.session.delete(voce)
     db.session.commit()
     return jsonify(ok=True)
+
+@app.route("/menu/riordina", methods=["POST"])
+@requires_auth
+def menu_riordina():
+    """Aggiorna l'ordinamento degli articoli"""
+    try:
+        d = request.get_json(force=True)
+        ordini = d.get('ordini', [])  # Array di {id, ordinamento}
+
+        for item in ordini:
+            voce = Voce.query.get(item['id'])
+            if voce:
+                voce.ordinamento = item['ordinamento']
+
+        db.session.commit()
+        return jsonify(ok=True)
+    except Exception as e:
+        logging.error(f"Errore riordina menu: {e}")
+        return jsonify(error=str(e)), 500
 
 # ══════════════════════════════════════════════════════════════════════════════
 # ENDPOINT AGGIUNTE (DA ordini_v2.db)

@@ -754,6 +754,86 @@ def complete_order(oid):
         logging.error(f"Errore complete: {e}")
         return jsonify(error=str(e)), 500
 
+@app.route("/orders/<int:oid>/add-items", methods=["POST"])
+def add_items_to_order(oid):
+    """Aggiunge articoli a un ordine esistente"""
+    try:
+        o = Comanda.query.get_or_404(oid)
+        data = request.get_json(force=True)
+        new_items = data.get('items', [])
+
+        if not new_items:
+            return jsonify(error="Nessun articolo da aggiungere"), 400
+
+        # Costruisci testo nuovi articoli
+        new_text = ''
+        for item in new_items:
+            prezzo_base = item['prezzo'] * item['qty']
+            costo_aggiunte = sum(a.get('prezzo', 0) * item['qty'] for a in item.get('aggiunte', []))
+            totale_item = prezzo_base + costo_aggiunte
+
+            riga = f"{item['qty']}× {item['nome']}"
+
+            if item.get('aggiunte') or item.get('rimozioni') or item.get('note'):
+                details = []
+                if item.get('aggiunte'):
+                    details.append(f"+ {', '.join(a['nome'] for a in item['aggiunte'])}")
+                if item.get('rimozioni'):
+                    details.append(f"− {', '.join(r['nome'] for r in item['rimozioni'])}")
+                if item.get('note'):
+                    details.append(item['note'])
+                riga += f" ({' | '.join(details)})"
+
+            riga += f" – €{totale_item:.2f}"
+            new_text += riga + '\n'
+
+        # Rimuovi TOTALE dall'ordine esistente se presente
+        current_lines = o.testo.split('\n')
+        filtered_lines = [line for line in current_lines if 'TOTALE:' not in line and line.strip() != '-' * 32]
+
+        # Combina ordine esistente + nuovi articoli
+        o.testo = '\n'.join(filtered_lines).strip() + '\n' + new_text.strip()
+        db.session.commit()
+
+        # Salva statistiche per i nuovi articoli
+        if new_items:
+            save_statistics(new_items, o.tavolo)
+
+        # Stampa cucina (solo nuovi articoli)
+        cucina_items = []
+        for item in new_items:
+            voce = Voce.query.filter_by(id=item.get('id')).first()
+            destinazione = 'cucina'
+
+            if voce and voce.destinazione_stampa:
+                destinazione = voce.destinazione_stampa
+            elif item.get('gruppo', '') in CUCINA_GROUPS:
+                destinazione = 'cucina'
+            else:
+                destinazione = 'bancone'
+
+            line = f"{item['qty']}× {item['nome']}"
+            if item.get('note'):
+                line += f" ({item['note']})"
+
+            if destinazione in ['cucina', 'entrambi']:
+                cucina_items.append(line)
+
+        if cucina_items:
+            enqueue_print(o.tavolo, '\n'.join(cucina_items), 'cucina')
+
+        # Stampa bar (ordine completo aggiornato)
+        total = calculate_total_from_text(o.testo)
+        ordine_con_totale = add_total_to_order(o.testo, total)
+        enqueue_print(o.tavolo, ordine_con_totale, 'bar')
+
+        logging.info(f"✓ Aggiunti {len(new_items)} articoli all'ordine {oid} - Tavolo {o.tavolo}")
+
+        return jsonify(ok=True, new_total=total, updated_text=ordine_con_totale)
+    except Exception as e:
+        logging.error(f"Errore add_items: {e}")
+        return jsonify(error=str(e)), 500
+
 # ══════════════════════════════════════════════════════════════════════════════
 # ENDPOINT DIVIDI CONTO
 # ══════════════════════════════════════════════════════════════════════════════

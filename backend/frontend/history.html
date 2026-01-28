@@ -254,6 +254,18 @@
       box-shadow: 0 4px 8px rgba(220,53,69,0.3);
     }
 
+    .btn-add {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      font-weight: bold;
+    }
+
+    .btn-add:hover {
+      background: linear-gradient(135deg, #5568d3 0%, #6a4290 100%);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(102,126,234,0.3);
+    }
+
     .no-orders {
       text-align: center;
       padding: 3rem;
@@ -789,6 +801,50 @@
     </div>
   </div>
 
+  <!-- Modal per aggiungere articoli -->
+  <div class="modal-overlay" id="addItemsModal">
+    <div class="modal-content" style="max-width: 900px; max-height: 90vh;">
+      <div class="modal-header">
+        <div class="modal-title" id="addItemsModalTitle">➕ Aggiungi Articoli</div>
+        <button class="modal-close" onclick="closeAddItemsModal()">&times;</button>
+      </div>
+      <div class="modal-body" style="overflow-y: auto; max-height: calc(90vh - 200px);">
+
+        <!-- Categorie -->
+        <div style="margin-bottom: 1.5rem;">
+          <h4 style="margin-bottom: 0.8rem; color: #667eea;">📂 Categorie</h4>
+          <div id="addItemsCategories" style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem;">
+            <!-- Categorie popolate da JS -->
+          </div>
+        </div>
+
+        <!-- Articoli -->
+        <div style="margin-bottom: 1.5rem;">
+          <h4 style="margin-bottom: 0.8rem; color: #667eea;">🍽️ Articoli <span id="addItemsCategoryName"></span></h4>
+          <div id="addItemsArticoli" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 0.8rem;">
+            <!-- Articoli popolati da JS -->
+          </div>
+        </div>
+
+        <!-- Carrello temporaneo -->
+        <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 3px solid #e2e8f0;">
+          <h4 style="margin-bottom: 0.8rem; color: #667eea;">🛒 Articoli da Aggiungere (<span id="tempCartCount">0</span>)</h4>
+          <div id="tempCartItems" style="min-height: 100px; max-height: 200px; overflow-y: auto;">
+            <div style="text-align: center; color: #a0aec0; padding: 2rem;">Nessun articolo selezionato</div>
+          </div>
+          <div style="margin-top: 1rem; text-align: right; font-size: 1.3rem; font-weight: bold; color: #667eea;">
+            TOTALE: €<span id="tempCartTotal">0.00</span>
+          </div>
+        </div>
+
+      </div>
+      <div class="modal-actions">
+        <button class="modal-btn modal-btn-secondary" onclick="closeAddItemsModal()">Annulla</button>
+        <button class="modal-btn modal-btn-primary" id="confirmAddItemsBtn" onclick="confirmAddItems()" disabled>✅ Conferma e Aggiungi</button>
+      </div>
+    </div>
+  </div>
+
   <button class="refresh-btn" onclick="loadOrders()" title="Aggiorna ordini">🔄</button>
 
   <script>
@@ -1300,6 +1356,7 @@
                   <div class="order-text">${order.testo}</div>
                   <div class="order-total">TOTALE: €${total.toFixed(2)}</div>
                   <div class="order-actions">
+                    <button class="btn-add" onclick="openAddItemsModal(${order.id}, '${order.tavolo}')">➕ Aggiungi</button>
                     <button class="btn-edit" onclick="openModal(${order.id}, '${order.tavolo}', \`${order.testo.replace(/`/g, '\\`')}\`)">✏️ Modifica</button>
                     <button class="btn-print" onclick="reprint(${order.id})">🖨️ Ristampa</button>
                     <button class="split-btn-mini" onclick="openSplitModal(${order.id}, '${order.tavolo}')">💳 Dividi</button>
@@ -1383,11 +1440,207 @@
       }
     });
 
+    // ========== FUNZIONI AGGIUNGI ARTICOLI ==========
+    let currentAddItemsOrder = null;
+    let menuData = [];
+    let addItemsCart = [];
+    let selectedAddCategory = '';
+
+    async function openAddItemsModal(orderId, tavolo) {
+      currentAddItemsOrder = { id: orderId, tavolo: tavolo };
+      addItemsCart = [];
+
+      // Carica menu se non già caricato
+      if (menuData.length === 0) {
+        try {
+          const res = await fetch('/menu');
+          menuData = await res.json();
+        } catch (e) {
+          showToast('❌ Errore caricamento menu', true);
+          return;
+        }
+      }
+
+      document.getElementById('addItemsModalTitle').textContent = `➕ Aggiungi Articoli - Tavolo ${tavolo}`;
+      renderAddCategories();
+      updateTempCart();
+
+      document.getElementById('addItemsModal').style.display = 'flex';
+    }
+
+    function closeAddItemsModal() {
+      document.getElementById('addItemsModal').style.display = 'none';
+      currentAddItemsOrder = null;
+      addItemsCart = [];
+      selectedAddCategory = '';
+    }
+
+    function renderAddCategories() {
+      const categorie = [...new Set(menuData.map(item => item.gruppo))];
+      const container = document.getElementById('addItemsCategories');
+
+      let html = '';
+      categorie.forEach(cat => {
+        const active = cat === selectedAddCategory ? 'background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-color: #667eea;' : '';
+        html += `<button onclick="selectAddCategory('${cat}')"
+                  style="padding: 0.6rem 1rem; border: 2px solid #e2e8f0; border-radius: 0.5rem;
+                  background: white; cursor: pointer; font-weight: 600; transition: all 0.2s; ${active}">
+                  ${cat}
+                </button>`;
+      });
+      container.innerHTML = html;
+
+      if (!selectedAddCategory && categorie.length > 0) {
+        selectAddCategory(categorie[0]);
+      }
+    }
+
+    function selectAddCategory(categoria) {
+      selectedAddCategory = categoria;
+      renderAddCategories();
+      renderAddArticoli();
+    }
+
+    function renderAddArticoli() {
+      const articoli = menuData.filter(item => item.gruppo === selectedAddCategory);
+      const container = document.getElementById('addItemsArticoli');
+      const catName = document.getElementById('addItemsCategoryName');
+
+      catName.textContent = `(${selectedAddCategory})`;
+
+      if (articoli.length === 0) {
+        container.innerHTML = '<div style="text-align: center; color: #a0aec0; padding: 2rem;">Nessun articolo</div>';
+        return;
+      }
+
+      let html = '';
+      articoli.forEach(art => {
+        html += `
+          <div onclick="addToTempCart(${art.id}, '${art.nome}', ${art.prezzo}, '${art.gruppo}')"
+               style="padding: 1rem; border: 2px solid #e2e8f0; border-radius: 0.8rem;
+               background: white; cursor: pointer; text-align: center; transition: all 0.2s;">
+            <div style="font-weight: 600; margin-bottom: 0.5rem; min-height: 2.5em;
+                        display: flex; align-items: center; justify-content: center;">
+              ${art.nome}
+            </div>
+            <div style="color: #667eea; font-weight: bold; font-size: 1.1rem;">
+              €${art.prezzo.toFixed(2)}
+            </div>
+          </div>`;
+      });
+      container.innerHTML = html;
+    }
+
+    function addToTempCart(id, nome, prezzo, gruppo) {
+      const existing = addItemsCart.find(item => item.id === id);
+      if (existing) {
+        existing.qty++;
+      } else {
+        addItemsCart.push({ id, nome, prezzo, gruppo, qty: 1, aggiunte: [], rimozioni: [], note: '' });
+      }
+      updateTempCart();
+    }
+
+    function removeTempCartItem(index) {
+      addItemsCart.splice(index, 1);
+      updateTempCart();
+    }
+
+    function changeTempQty(index, delta) {
+      addItemsCart[index].qty += delta;
+      if (addItemsCart[index].qty <= 0) {
+        addItemsCart.splice(index, 1);
+      }
+      updateTempCart();
+    }
+
+    function updateTempCart() {
+      const container = document.getElementById('tempCartItems');
+      const count = document.getElementById('tempCartCount');
+      const totalEl = document.getElementById('tempCartTotal');
+      const confirmBtn = document.getElementById('confirmAddItemsBtn');
+
+      count.textContent = addItemsCart.length;
+
+      if (addItemsCart.length === 0) {
+        container.innerHTML = '<div style="text-align: center; color: #a0aec0; padding: 2rem;">Nessun articolo selezionato</div>';
+        totalEl.textContent = '0.00';
+        confirmBtn.disabled = true;
+        return;
+      }
+
+      let html = '';
+      let total = 0;
+
+      addItemsCart.forEach((item, index) => {
+        const itemTotal = item.prezzo * item.qty;
+        total += itemTotal;
+
+        html += `
+          <div style="padding: 0.8rem; background: #f7fafc; border: 2px solid #e2e8f0;
+                      border-radius: 0.8rem; margin-bottom: 0.8rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <div style="flex: 1;">
+                <div style="font-weight: 600;">${item.nome}</div>
+                <div style="color: #667eea; font-weight: bold;">€${itemTotal.toFixed(2)}</div>
+              </div>
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <button onclick="changeTempQty(${index}, -1)"
+                        style="width: 2rem; height: 2rem; border: 2px solid #667eea; border-radius: 0.5rem;
+                        background: white; color: #667eea; font-weight: bold; cursor: pointer; font-size: 1.2rem;">−</button>
+                <div style="font-weight: bold; min-width: 1.5rem; text-align: center;">${item.qty}</div>
+                <button onclick="changeTempQty(${index}, 1)"
+                        style="width: 2rem; height: 2rem; border: 2px solid #667eea; border-radius: 0.5rem;
+                        background: white; color: #667eea; font-weight: bold; cursor: pointer; font-size: 1.2rem;">+</button>
+                <button onclick="removeTempCartItem(${index})"
+                        style="width: 2rem; height: 2rem; border: none; border-radius: 0.5rem;
+                        background: #fc8181; color: white; cursor: pointer; font-size: 1rem;">🗑️</button>
+              </div>
+            </div>
+          </div>`;
+      });
+
+      container.innerHTML = html;
+      totalEl.textContent = total.toFixed(2);
+      confirmBtn.disabled = false;
+    }
+
+    async function confirmAddItems() {
+      if (!currentAddItemsOrder || addItemsCart.length === 0) return;
+
+      try {
+        const res = await fetch(`/orders/${currentAddItemsOrder.id}/add-items`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ items: addItemsCart })
+        });
+
+        if (res.ok) {
+          showToast('✅ Articoli aggiunti con successo!');
+          closeAddItemsModal();
+          loadOrders();
+        } else {
+          const data = await res.json();
+          showToast(`❌ ${data.error || 'Errore'}`, true);
+        }
+      } catch (e) {
+        showToast('❌ Errore: ' + e.message, true);
+      }
+    }
+
+    // Chiudi addItemsModal con click esterno
+    document.getElementById('addItemsModal').addEventListener('click', (e) => {
+      if (e.target.id === 'addItemsModal') {
+        closeAddItemsModal();
+      }
+    });
+
     // Chiudi modal con ESC
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
         closeModal();
         closeSplitModal();
+        closeAddItemsModal();
       }
     });
 

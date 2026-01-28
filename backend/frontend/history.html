@@ -1,0 +1,1398 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Ordini Attivi - Sunset Bar</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+      min-height: 100vh;
+    }
+    
+    .header {
+      background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+      color: white;
+      padding: 1.5rem;
+      text-align: center;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+
+    .header h1 {
+      font-size: 1.8rem;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+    
+    .nav-buttons {
+      display: flex;
+      justify-content: center;
+      gap: 0.8rem;
+      flex-wrap: wrap;
+    }
+    
+    .nav-buttons button {
+      padding: 0.7rem 1.2rem;
+      border: none;
+      border-radius: 0.6rem;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.3s;
+      font-size: 0.9rem;
+      background: rgba(255,255,255,0.2);
+      color: white;
+      backdrop-filter: blur(10px);
+    }
+    
+    .nav-buttons button:hover {
+      background: rgba(255,255,255,0.3);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+    
+    .secret-btn {
+      background: rgba(142, 68, 173, 0.8) !important;
+    }
+    
+    .secret-btn:hover {
+      background: rgba(125, 60, 152, 0.9) !important;
+    }
+
+    .container {
+      max-width: 1800px;
+      margin: 0 auto;
+      padding: 0.8rem;
+    }
+    
+    /* Container per i tavoli - 3 colonne FORZATO */
+    #orders-container {
+      display: grid !important;
+      grid-template-columns: repeat(3, 1fr) !important;
+      gap: 1rem;
+      width: 100%;
+    }
+    
+    /* Responsive per tablet - ABBASSATO da 1200px a 900px */
+    @media (max-width: 900px) {
+      #orders-container {
+        grid-template-columns: repeat(2, 1fr) !important;
+      }
+    }
+    
+    /* Responsive per mobile */
+    @media (max-width: 768px) {
+      #orders-container {
+        grid-template-columns: 1fr !important;
+      }
+    }
+
+    .stats-bar {
+      background: white;
+      border-radius: 1rem;
+      padding: 1.2rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .stat-item {
+      text-align: center;
+    }
+
+    .stat-number {
+      font-size: 2rem;
+      font-weight: bold;
+      color: #007bff;
+    }
+
+    .stat-label {
+      color: #6c757d;
+      font-size: 0.9rem;
+      margin-top: 0.3rem;
+    }
+
+    .orders-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .order-card {
+      background: white;
+      border-radius: 1rem;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      overflow: hidden;
+      transition: all 0.3s;
+      border: 2px solid transparent;
+    }
+
+    .order-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+      border-color: #007bff;
+    }
+
+    .order-header {
+      background: linear-gradient(135deg, #5a6c7d 0%, #4a5c6d 100%);
+      color: white;
+      padding: 0.6rem 0.8rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .order-table {
+      font-size: 1rem;
+      font-weight: 600;
+      opacity: 0.9;
+    }
+
+    .order-time {
+      font-size: 0.8rem;
+      opacity: 0.85;
+    }
+
+    .order-body {
+      padding: 0.8rem;
+    }
+
+    .order-text {
+      font-family: 'Courier New', monospace;
+      font-size: 0.85rem;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      background: #f8f9fa;
+      padding: 0.8rem;
+      border-radius: 0.5rem;
+      margin-bottom: 0.8rem;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .order-total {
+      font-size: 1.2rem;
+      font-weight: bold;
+      color: #28a745;
+      text-align: right;
+      padding: 0.5rem 0;
+      border-top: 2px solid #e9ecef;
+    }
+
+    .order-actions {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .order-actions button {
+      flex: 1;
+      min-width: 90px;
+      padding: 0.6rem 0.4rem;
+      border: none;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.3s;
+      font-size: 0.85rem;
+    }
+
+    .btn-edit {
+      background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);
+      color: #000;
+    }
+
+    .btn-edit:hover {
+      background: linear-gradient(135deg, #ffb300 0%, #ff8f00 100%);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(255,152,0,0.3);
+    }
+
+    .btn-print {
+      background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+      color: white;
+    }
+
+    .btn-print:hover {
+      background: linear-gradient(135deg, #138496 0%, #117a8b 100%);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(23,162,184,0.3);
+    }
+
+    .btn-complete {
+      background: linear-gradient(135deg, #28a745 0%, #218838 100%);
+      color: white;
+    }
+
+    .btn-complete:hover {
+      background: linear-gradient(135deg, #218838 0%, #1e7e34 100%);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(40,167,69,0.3);
+    }
+
+    .btn-delete {
+      background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+      color: white;
+    }
+
+    .btn-delete:hover {
+      background: linear-gradient(135deg, #c82333 0%, #bd2130 100%);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(220,53,69,0.3);
+    }
+
+    .no-orders {
+      text-align: center;
+      padding: 3rem;
+      color: #6c757d;
+      font-size: 1.2rem;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      background: #28a745;
+      color: white;
+      padding: 1rem 1.5rem;
+      border-radius: 0.5rem;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      z-index: 10000;
+      animation: slideIn 0.3s ease-out;
+    }
+
+    .toast.error {
+      background: #dc3545;
+    }
+
+    @keyframes slideIn {
+      from {
+        transform: translateX(400px);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.7);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 1rem;
+    }
+
+    .modal-content {
+      background: white;
+      border-radius: 1rem;
+      max-width: 600px;
+      width: 100%;
+      max-height: 80vh;
+      overflow-y: auto;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    }
+
+    .modal-header {
+      background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+      color: white;
+      padding: 1.5rem;
+      border-radius: 1rem 1rem 0 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-title {
+      font-size: 1.3rem;
+      font-weight: bold;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 2rem;
+      cursor: pointer;
+      padding: 0;
+      width: 2rem;
+      height: 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 0.3rem;
+      transition: background 0.3s;
+    }
+
+    .modal-close:hover {
+      background: rgba(255,255,255,0.2);
+    }
+
+    .modal-body {
+      padding: 1.5rem;
+    }
+
+    .modal-body textarea {
+      width: 100%;
+      min-height: 300px;
+      padding: 1rem;
+      border: 2px solid #e9ecef;
+      border-radius: 0.5rem;
+      font-family: 'Courier New', monospace;
+      font-size: 0.9rem;
+      resize: vertical;
+    }
+
+    .modal-actions {
+      padding: 1rem 1.5rem;
+      border-top: 1px solid #e9ecef;
+      display: flex;
+      gap: 0.8rem;
+      justify-content: flex-end;
+    }
+
+    .modal-btn {
+      padding: 0.7rem 1.5rem;
+      border: none;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.3s;
+    }
+
+    .modal-btn-primary {
+      background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+      color: white;
+    }
+
+    .modal-btn-primary:hover {
+      background: linear-gradient(135deg, #0056b3 0%, #004085 100%);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0,123,255,0.3);
+    }
+
+    .modal-btn-primary:disabled {
+      background: #6c757d;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .modal-btn-secondary {
+      background: #6c757d;
+      color: white;
+    }
+
+    .modal-btn-secondary:hover {
+      background: #5a6268;
+      transform: translateY(-2px);
+    }
+
+    /* NUOVO BOTTONE DIVIDI CONTO */
+    .split-btn-mini {
+      background: linear-gradient(135deg, #6f42c1 0%, #5a32a3 100%) !important;
+      color: white !important;
+    }
+
+    .split-btn-mini:hover {
+      background: linear-gradient(135deg, #5a32a3 0%, #4a2885 100%) !important;
+    }
+
+    /* Bottone per unire ordini */
+    .merge-btn-mini {
+      background: linear-gradient(135deg, #fd7e14 0%, #e56b00 100%) !important;
+      color: white !important;
+      font-size: 0.85rem !important;
+      padding: 0.5rem 0.8rem !important;
+    }
+
+    .merge-btn-mini:hover {
+      background: linear-gradient(135deg, #e56b00 0%, #cc5f00 100%) !important;
+    }
+
+    .refresh-btn {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+      color: white;
+      border: none;
+      font-size: 1.5rem;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      transition: all 0.3s;
+      z-index: 999;
+    }
+
+    .refresh-btn:hover {
+      transform: scale(1.1) rotate(180deg);
+      box-shadow: 0 6px 16px rgba(0,0,0,0.4);
+    }
+
+    .auto-refresh-info {
+      text-align: center;
+      color: #6c757d;
+      font-size: 0.9rem;
+      margin-top: 0.5rem;
+    }
+
+    .countdown {
+      font-weight: bold;
+      color: #007bff;
+    }
+
+    .table-group {
+      margin-bottom: 0;
+      border: 2px solid #dee2e6;
+      border-radius: 1rem;
+      padding: 0.8rem;
+      background: white;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    .table-group-header {
+      background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+      color: white;
+      padding: 1rem 1.2rem;
+      border-radius: 0.8rem;
+      margin-bottom: 0.8rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.3);
+    }
+
+    .table-group-title {
+      font-size: 1.5rem;
+      font-weight: bold;
+      letter-spacing: 0.5px;
+    }
+
+    .table-group-info {
+      font-size: 1rem;
+      opacity: 0.95;
+      font-weight: 600;
+    }
+
+    .paid-badge {
+      background: #ffc107;
+      color: #000;
+      padding: 0.3rem 0.6rem;
+      border-radius: 0.3rem;
+      font-size: 0.8rem;
+      font-weight: bold;
+      margin-left: 0.5rem;
+    }
+
+    /* ========== MODAL DIVIDI CONTO ========== */
+    .split-modal-content {
+      max-width: 700px;
+    }
+
+    .split-items-list {
+      max-height: 400px;
+      overflow-y: auto;
+      border: 2px solid #e9ecef;
+      border-radius: 0.5rem;
+      padding: 0.5rem;
+      margin-bottom: 1rem;
+      background: #f8f9fa;
+    }
+
+    /* MODIFICATO: Stile per singoli articoli */
+    .split-item {
+      background: white;
+      border: 2px solid #e9ecef;
+      border-radius: 0.5rem;
+      padding: 0.8rem;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .split-item:hover {
+      border-color: #007bff;
+      background: #f0f7ff;
+      transform: translateX(5px);
+    }
+
+    .split-item input[type="checkbox"] {
+      width: 20px;
+      height: 20px;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .split-item-details {
+      flex: 1;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .split-item-name {
+      font-weight: 600;
+      color: #2c3e50;
+    }
+
+    .split-item-note {
+      font-size: 0.85rem;
+      color: #6c757d;
+      font-style: italic;
+      margin-left: 0.5rem;
+    }
+
+    .split-item-price {
+      font-weight: bold;
+      color: #28a745;
+      font-size: 1.1rem;
+    }
+
+    .split-summary {
+      background: #e3f2fd;
+      padding: 1rem;
+      border-radius: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .split-total {
+      font-size: 1.3rem;
+      font-weight: bold;
+      color: #007bff;
+      margin-bottom: 0.8rem;
+    }
+
+    .paid-history {
+      margin-top: 1.5rem;
+      border: 2px solid #e9ecef;
+      border-radius: 0.5rem;
+      overflow: hidden;
+    }
+
+    .paid-history-header {
+      background: #f8f9fa;
+      padding: 0.8rem 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: background 0.3s;
+    }
+
+    .paid-history-header:hover {
+      background: #e9ecef;
+    }
+
+    .paid-history-header::after {
+      content: "▼";
+      transition: transform 0.3s;
+    }
+
+    .paid-history.expanded .paid-history-header::after {
+      transform: rotate(180deg);
+    }
+
+    .paid-history-content {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s;
+    }
+
+    .paid-history.expanded .paid-history-content {
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .paid-item {
+      padding: 0.8rem 1rem;
+      border-top: 1px solid #e9ecef;
+      background: white;
+    }
+
+    .paid-item-header {
+      display: flex;
+      justify-content: space-between;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      color: #28a745;
+    }
+
+    .paid-item-details {
+      font-size: 0.9rem;
+      color: #6c757d;
+    }
+
+    @media (max-width: 768px) {
+      .orders-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .stats-bar {
+        flex-direction: column;
+      }
+
+      .order-actions {
+        flex-direction: column;
+      }
+
+      .order-actions button {
+        width: 100%;
+      }
+
+      .split-btn-mini, .merge-btn-mini {
+        width: 100%;
+      }
+
+      .modal-content, .split-modal-content {
+        max-width: 100%;
+        margin: 0;
+        border-radius: 0;
+      }
+
+      .split-items-list {
+        max-height: 300px;
+      }
+
+      .split-item {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .split-item-details {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>📋 Ordini Attivi - Sunset Bar</h1>
+    <div class="nav-buttons">
+      <button onclick="location.href='/'">🏠 Nuovo Ordine</button>
+      <button onclick="location.href='/storico.html'">📜 Storico</button>
+      <button onclick="location.href='/statistiche.html'">📊 Statistiche</button>
+      <button class="secret-btn" onclick="location.href='/admin.html'">⚙️ Menu</button>
+      <button onclick="location.href='/configurazione-tavoli.html'">🎯 Configurazione Tavoli</button>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="stats-bar">
+      <div class="stat-item">
+        <div class="stat-number" id="total-tables">0</div>
+        <div class="stat-label">Tavoli Attivi</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-number" id="total-orders">0</div>
+        <div class="stat-label">Ordini Totali</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-number" id="total-value">€0.00</div>
+        <div class="stat-label">Valore Totale</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-label">Ultimo Aggiornamento</div>
+        <div class="stat-number" id="last-update" style="font-size: 1.2rem;">--:--</div>
+      </div>
+    </div>
+
+    <div class="auto-refresh-info">
+      🔄 Aggiornamento automatico tra <span class="countdown" id="refresh-countdown">30s</span>
+    </div>
+
+    <div id="orders-container">
+      <div class="no-orders">Caricamento ordini...</div>
+    </div>
+  </div>
+
+  <!-- Modal per modificare l'ordine -->
+  <div class="modal-overlay" id="orderModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-title" id="modalTitle">Modifica Ordine</div>
+        <button class="modal-close" onclick="closeModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <textarea id="modalTextarea"></textarea>
+      </div>
+      <div class="modal-actions">
+        <button class="modal-btn modal-btn-secondary" onclick="closeModal()">Annulla</button>
+        <button class="modal-btn modal-btn-primary" onclick="saveModalChanges()">💾 Salva Modifiche</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal per dividere il conto -->
+  <div class="modal-overlay" id="splitModal">
+    <div class="modal-content split-modal-content">
+      <div class="modal-header">
+        <div class="modal-title" id="splitModalTitle">💳 Dividi Conto</div>
+        <button class="modal-close" onclick="closeSplitModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <!-- Lista articoli selezionabili -->
+        <h4>Seleziona articoli da pagare:</h4>
+        <div class="split-items-list" id="splitItemsList">
+          <!-- Gli articoli verranno inseriti qui dinamicamente -->
+        </div>
+
+        <!-- Riepilogo -->
+        <div class="split-summary">
+          <div class="split-total" id="splitTotal">Totale da pagare: €0.00</div>
+          <label>
+            <input type="checkbox" id="printReceiptCheckbox" checked>
+            Stampa conto parziale
+          </label>
+        </div>
+
+        <!-- Storico pagamenti -->
+        <div class="paid-history" id="paidHistory">
+          <div class="paid-history-header" onclick="togglePaidHistory()">
+            📋 Storico Pagamenti
+          </div>
+          <div class="paid-history-content" id="paidHistoryContent">
+            <!-- I pagamenti precedenti verranno inseriti qui -->
+          </div>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="modal-btn modal-btn-secondary" onclick="closeSplitModal()">Annulla</button>
+        <button class="modal-btn modal-btn-primary" id="splitPayButton" onclick="processSplit()" disabled>💳 Processa Pagamento</button>
+      </div>
+    </div>
+  </div>
+
+  <button class="refresh-btn" onclick="loadOrders()" title="Aggiorna ordini">🔄</button>
+
+  <script>
+    let refreshInterval;
+    let countdownInterval;
+    let countdownSeconds = 30;
+    let currentEditingOrder = null;
+    let currentSplitOrder = null;
+    let splitItems = [];
+    let selectedSplitItems = [];
+
+    // Funzione per calcolare il totale dall'ordine testuale
+    function calcolaTotale(testoOrdine) {
+      let totale = 0.0;
+      const righe = testoOrdine.split('\n');
+      
+      for (let riga of righe) {
+        riga = riga.trim();
+        if (!riga || !riga.includes('€')) continue;
+        
+        // Trova tutti i prezzi in formato €XX.XX o €XX,XX
+        const matches = riga.match(/€(\d+[.,]\d{2})/g);
+        if (matches && matches.length > 0) {
+          // Prendi l'ultimo prezzo trovato (quello finale della riga)
+          const ultimoPrezzo = matches[matches.length - 1];
+          const prezzo = parseFloat(ultimoPrezzo.replace('€', '').replace(',', '.'));
+          totale += prezzo;
+        } else {
+          // Fallback: cerca prezzi senza decimali
+          const matchesInt = riga.match(/€(\d+)/g);
+          if (matchesInt && matchesInt.length > 0) {
+            const ultimoPrezzo = matchesInt[matchesInt.length - 1];
+            const prezzo = parseFloat(ultimoPrezzo.replace('€', ''));
+            totale += prezzo;
+          }
+        }
+      }
+      
+      return totale;
+    }
+
+    // Parsa il testo dell'ordine per estrarre gli articoli
+    function parseOrderText(orderText) {
+      const items = [];
+      const lines = orderText.trim().split('\n');
+      
+      for (let line of lines) {
+        line = line.trim();
+        if (!line || line.includes('TOTALE:') || line.startsWith('-')) continue;
+        
+        // Pattern per riconoscere: quantità× nome (note) – €prezzo
+        const pattern = /(\d+)×\s*([^–]+?)\s*–\s*€(\d+[.,]\d{2})/;
+        const match = line.match(pattern);
+        
+        if (match) {
+          const qty = parseInt(match[1]);
+          const nameWithNotes = match[2].trim();
+          const totalPrice = parseFloat(match[3].replace(',', '.'));
+          const unitPrice = totalPrice / qty;
+          
+          // Separa nome e note
+          let note = "";
+          let name = nameWithNotes;
+          if (nameWithNotes.includes('(') && nameWithNotes.includes(')')) {
+            const parts = nameWithNotes.split('(', 2);
+            name = parts[0].trim();
+            note = parts[1].replace(')', '').trim();
+          }
+          
+          items.push({
+            name: name,
+            quantity: qty,
+            unit_price: unitPrice,
+            total_price: totalPrice,
+            note: note,
+            original_line: line
+          });
+        }
+      }
+      
+      return items;
+    }
+
+    function showToast(message, isError = false) {
+      const existingToast = document.querySelector('.toast');
+      if (existingToast) {
+        existingToast.remove();
+      }
+
+      const toast = document.createElement('div');
+      toast.className = `toast ${isError ? 'error' : ''}`;
+      toast.textContent = message;
+      document.body.appendChild(toast);
+
+      setTimeout(() => {
+        toast.remove();
+      }, 3000);
+    }
+
+    function updateStats(tablesCount, ordersCount, totalValue) {
+      document.getElementById('total-tables').textContent = tablesCount;
+      document.getElementById('total-orders').textContent = ordersCount;
+      document.getElementById('total-value').textContent = `€${totalValue.toFixed(2)}`;
+      document.getElementById('last-update').textContent = new Date().toLocaleTimeString('it-IT', {
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+
+    function startCountdown() {
+      countdownSeconds = 30;
+      if (countdownInterval) clearInterval(countdownInterval);
+      
+      countdownInterval = setInterval(() => {
+        countdownSeconds--;
+        document.getElementById('refresh-countdown').textContent = `${countdownSeconds}s`;
+        
+        if (countdownSeconds <= 0) {
+          loadOrders();
+        }
+      }, 1000);
+    }
+
+    function openModal(orderId, tavolo, testo) {
+      currentEditingOrder = { id: orderId, tavolo: tavolo };
+      document.getElementById('modalTitle').textContent = `Modifica Ordine #${orderId} - Tavolo ${tavolo}`;
+      document.getElementById('modalTextarea').value = testo;
+      document.getElementById('orderModal').style.display = 'flex';
+    }
+
+    function closeModal() {
+      document.getElementById('orderModal').style.display = 'none';
+      currentEditingOrder = null;
+    }
+
+    async function saveModalChanges() {
+      if (!currentEditingOrder) return;
+      
+      const newText = document.getElementById('modalTextarea').value;
+      
+      try {
+        const res = await fetch(`/orders/${currentEditingOrder.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            tavolo: currentEditingOrder.tavolo, 
+            testo: newText 
+          })
+        });
+        
+        if (res.ok) {
+          showToast('✅ Ordine aggiornato con successo');
+          closeModal();
+          loadOrders();
+        } else {
+          showToast('❌ Errore aggiornamento ordine', true);
+        }
+      } catch (error) {
+        showToast(`❌ Errore: ${error.message}`, true);
+      }
+    }
+
+    // ========== FUNZIONI DIVIDI CONTO ==========
+
+    async function openSplitModal(orderId, tavolo) {
+      try {
+        currentSplitOrder = { id: orderId, tavolo: tavolo };
+        
+        // Carica dettagli ordine
+        const res = await fetch(`/orders/${orderId}/details`);
+        const orderDetails = await res.json();
+        
+        if (!res.ok) {
+          throw new Error(orderDetails.error || 'Errore caricamento ordine');
+        }
+        
+        splitItems = orderDetails.current_items;
+        selectedSplitItems = [];
+        
+        document.getElementById('splitModalTitle').textContent = `💳 Dividi Conto - Tavolo ${tavolo}`;
+        
+        // Popola lista articoli
+        renderSplitItems();
+        
+        // Popola storico pagamenti
+        renderPaymentHistory(orderDetails.payments_history);
+        
+        // Mostra badge se ci sono pagamenti
+        if (orderDetails.has_payments) {
+          const badge = document.createElement('span');
+          badge.textContent = '💰';
+          badge.style.marginLeft = '0.5rem';
+          document.getElementById('splitModalTitle').appendChild(badge);
+        }
+        
+        document.getElementById('splitModal').style.display = 'flex';
+        
+      } catch (error) {
+        console.error('Errore:', error);
+        showToast(`❌ Errore: ${error.message}`, true);
+      }
+    }
+
+    // MODIFICATO: Mostra ogni singolo articolo separatamente
+    function renderSplitItems() {
+      const container = document.getElementById('splitItemsList');
+      container.innerHTML = '';
+      
+      if (splitItems.length === 0) {
+        container.innerHTML = '<div style="text-align: center; color: #666; font-style: italic;">Nessun articolo disponibile</div>';
+        return;
+      }
+      
+      let itemIndex = 0;
+      
+      // Espandi ogni articolo in base alla quantità
+      splitItems.forEach((item) => {
+        // Crea un elemento separato per ogni unità
+        for (let i = 0; i < item.quantity; i++) {
+          const div = document.createElement('div');
+          div.className = 'split-item';
+          
+          const checkbox = document.createElement('input');
+          checkbox.type = 'checkbox';
+          checkbox.id = `split-item-${itemIndex}`;
+          checkbox.dataset.itemName = item.name;
+          checkbox.dataset.itemNote = item.note || '';
+          checkbox.dataset.unitPrice = item.unit_price;
+          checkbox.onchange = () => updateSelectedItems();
+          
+          const details = document.createElement('div');
+          details.className = 'split-item-details';
+          
+          const nameDiv = document.createElement('div');
+          nameDiv.innerHTML = `
+            <span class="split-item-name">${item.name}</span>
+            ${item.note ? `<span class="split-item-note">(${item.note})</span>` : ''}
+          `;
+          
+          const priceDiv = document.createElement('div');
+          priceDiv.className = 'split-item-price';
+          priceDiv.textContent = `€${item.unit_price.toFixed(2)}`;
+          
+          details.appendChild(nameDiv);
+          details.appendChild(priceDiv);
+          
+          div.appendChild(checkbox);
+          div.appendChild(details);
+          
+          // Rendi cliccabile l'intero div
+          div.onclick = (e) => {
+            if (e.target !== checkbox) {
+              checkbox.checked = !checkbox.checked;
+              updateSelectedItems();
+            }
+          };
+          
+          container.appendChild(div);
+          itemIndex++;
+        }
+      });
+      
+      updateSelectedItems();
+    }
+
+    // MODIFICATO: Aggrega gli articoli selezionati per inviarli al server
+    function updateSelectedItems() {
+      const checkboxes = document.querySelectorAll('#splitItemsList input[type="checkbox"]');
+      
+      // Mappa per raggruppare articoli identici
+      const itemsMap = new Map();
+      let total = 0;
+      
+      checkboxes.forEach((checkbox) => {
+        if (checkbox.checked) {
+          const name = checkbox.dataset.itemName;
+          const note = checkbox.dataset.itemNote;
+          const unitPrice = parseFloat(checkbox.dataset.unitPrice);
+          
+          // Crea una chiave univoca per raggruppare
+          const key = `${name}|${note}`;
+          
+          if (itemsMap.has(key)) {
+            const existing = itemsMap.get(key);
+            existing.quantity += 1;
+            existing.total_price = existing.quantity * unitPrice;
+          } else {
+            itemsMap.set(key, {
+              name: name,
+              note: note,
+              unit_price: unitPrice,
+              quantity: 1,
+              total_price: unitPrice
+            });
+          }
+          
+          total += unitPrice;
+        }
+      });
+      
+      selectedSplitItems = Array.from(itemsMap.values());
+      
+      document.getElementById('splitTotal').textContent = `Totale da pagare: €${total.toFixed(2)}`;
+      document.getElementById('splitPayButton').disabled = selectedSplitItems.length === 0;
+    }
+
+    function renderPaymentHistory(payments) {
+      const container = document.getElementById('paidHistoryContent');
+      container.innerHTML = '';
+      
+      if (!payments || payments.length === 0) {
+        container.innerHTML = '<div style="text-align: center; color: #666; font-style: italic;">Nessun pagamento precedente</div>';
+        return;
+      }
+      
+      payments.forEach(payment => {
+        const div = document.createElement('div');
+        div.className = 'paid-item';
+        
+        const date = new Date(payment.created_at);
+        const timeStr = date.toLocaleString('it-IT');
+        
+        div.innerHTML = `
+          <div class="paid-item-header">
+            <span>€${payment.importo.toFixed(2)}</span>
+            <span>${timeStr}</span>
+          </div>
+          <div class="paid-item-details">
+            ${payment.articoli.map(item => `${item.quantity}× ${item.name}${item.note ? ` (${item.note})` : ''}`).join(', ')}
+          </div>
+        `;
+        
+        container.appendChild(div);
+      });
+    }
+
+    function togglePaidHistory() {
+      document.getElementById('paidHistory').classList.toggle('expanded');
+    }
+
+    async function processSplit() {
+      if (selectedSplitItems.length === 0) {
+        showToast('❌ Seleziona almeno un articolo', true);
+        return;
+      }
+      
+      const printReceipt = document.getElementById('printReceiptCheckbox').checked;
+      
+      try {
+        const res = await fetch(`/orders/${currentSplitOrder.id}/split`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            paid_items: selectedSplitItems,
+            print_receipt: printReceipt
+          })
+        });
+        
+        const result = await res.json();
+        
+        if (!res.ok) {
+          throw new Error(result.error || 'Errore durante la divisione del conto');
+        }
+        
+        const message = printReceipt 
+          ? `✅ Conto parziale di €${result.importo_pagato.toFixed(2)} processato e stampato!`
+          : `✅ Conto parziale di €${result.importo_pagato.toFixed(2)} processato!`;
+        
+        showToast(message);
+        
+        if (result.ordine_completato) {
+          showToast('🎉 Ordine completamente pagato!');
+        }
+        
+        closeSplitModal();
+        loadOrders();
+        
+      } catch (error) {
+        console.error('Errore:', error);
+        showToast(`❌ Errore: ${error.message}`, true);
+      }
+    }
+
+    function closeSplitModal() {
+      document.getElementById('splitModal').style.display = 'none';
+      currentSplitOrder = null;
+      splitItems = [];
+      selectedSplitItems = [];
+      document.getElementById('paidHistory').classList.remove('expanded');
+    }
+
+    // Funzione per unire ordini dello stesso tavolo
+    async function mergeTableOrders(tavolo, orderIds) {
+      if (!confirm(`🔗 Unire tutti gli ordini del tavolo ${tavolo}?`)) return;
+      
+      try {
+        // Prendi tutti i testi degli ordini del tavolo
+        const ordersToMerge = [];
+        for (let id of orderIds) {
+          const order = window.currentOrders.find(o => o.id === id);
+          if (order) {
+            ordersToMerge.push(order.testo);
+          }
+        }
+        
+        // Unisci i testi
+        const testoUnito = ordersToMerge.join('\n---\n');
+        
+        // Aggiorna il primo ordine con il testo unito
+        const firstOrderId = orderIds[0];
+        const res = await fetch(`/orders/${firstOrderId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tavolo: tavolo, testo: testoUnito })
+        });
+        
+        if (!res.ok) throw new Error('Errore aggiornamento primo ordine');
+        
+        // Elimina gli altri ordini
+        for (let i = 1; i < orderIds.length; i++) {
+          const deleteRes = await fetch(`/orders/${orderIds[i]}`, { method: 'DELETE' });
+          if (!deleteRes.ok) {
+            console.warn(`Errore eliminazione ordine ${orderIds[i]}`);
+          }
+        }
+        
+        showToast(`✅ Ordini del tavolo ${tavolo} uniti con successo!`);
+        loadOrders();
+        
+      } catch (error) {
+        console.error('Errore unione ordini:', error);
+        showToast(`❌ Errore: ${error.message}`, true);
+      }
+    }
+
+    async function loadOrders() {
+      try {
+        const res = await fetch('/orders');
+        const orders = await res.json();
+        window.currentOrders = orders;
+
+        const container = document.getElementById('orders-container');
+
+        if (orders.length === 0) {
+          container.innerHTML = '<div class="no-orders">📭 Nessun ordine attivo</div>';
+          updateStats(0, 0, 0);
+          startCountdown();
+          return;
+        }
+
+        // Raggruppa ordini per tavolo
+        const ordersByTable = {};
+        orders.forEach(order => {
+          if (!ordersByTable[order.tavolo]) {
+            ordersByTable[order.tavolo] = [];
+          }
+          ordersByTable[order.tavolo].push(order);
+        });
+
+        let totalValue = 0;
+        let html = '';
+
+        // Ordina i tavoli numericamente
+        const sortedTables = Object.keys(ordersByTable).sort((a, b) => {
+          const numA = parseInt(a) || 0;
+          const numB = parseInt(b) || 0;
+          return numA - numB;
+        });
+
+        sortedTables.forEach(tavolo => {
+          const tableOrders = ordersByTable[tavolo];
+          const tableTotal = tableOrders.reduce((sum, order) => sum + calcolaTotale(order.testo), 0);
+          totalValue += tableTotal;
+
+          html += `<div class="table-group">`;
+          html += `<div class="table-group-header">`;
+          html += `<div class="table-group-title">🍽️ Tavolo ${tavolo}</div>`;
+          html += `<div class="table-group-info">${tableOrders.length} ordine/i • €${tableTotal.toFixed(2)}</div>`;
+          html += `</div>`;
+
+          // Mostra bottone unisci se ci sono più ordini per lo stesso tavolo
+          if (tableOrders.length > 1) {
+            html += `<div style="text-align: center; margin-bottom: 1rem;">`;
+            html += `<button class="merge-btn-mini" onclick="mergeTableOrders('${tavolo}', [${tableOrders.map(o => o.id).join(',')}])">`;
+            html += `🔗 Unisci ${tableOrders.length} ordini`;
+            html += `</button>`;
+            html += `</div>`;
+          }
+
+          html += `<div class="orders-grid">`;
+
+          tableOrders.forEach(order => {
+            const total = calcolaTotale(order.testo);
+            const time = new Date(order.created_at).toLocaleTimeString('it-IT', {
+              hour: '2-digit',
+              minute: '2-digit'
+            });
+
+            // Controlla se ha pagamenti parziali
+            const hasPaidBadge = order.has_partial_payments ? '<span class="paid-badge">💰 Parziale</span>' : '';
+
+            html += `
+              <div class="order-card">
+                <div class="order-header">
+                  <div class="order-table">Ordine #${order.id}${hasPaidBadge}</div>
+                  <div class="order-time">🕐 ${time}</div>
+                </div>
+                <div class="order-body">
+                  <div class="order-text">${order.testo}</div>
+                  <div class="order-total">TOTALE: €${total.toFixed(2)}</div>
+                  <div class="order-actions">
+                    <button class="btn-edit" onclick="openModal(${order.id}, '${order.tavolo}', \`${order.testo.replace(/`/g, '\\`')}\`)">✏️ Modifica</button>
+                    <button class="btn-print" onclick="reprint(${order.id})">🖨️ Ristampa</button>
+                    <button class="split-btn-mini" onclick="openSplitModal(${order.id}, '${order.tavolo}')">💳 Dividi</button>
+                    <button class="btn-complete" onclick="completeOrder(${order.id})">✅ Completa</button>
+                    <button class="btn-delete" onclick="deleteOrder(${order.id})">🗑️ Elimina</button>
+                  </div>
+                </div>
+              </div>
+            `;
+          });
+
+          html += `</div></div>`;
+        });
+
+        container.innerHTML = html;
+        updateStats(sortedTables.length, orders.length, totalValue);
+        startCountdown();
+
+      } catch (error) {
+        console.error('Errore caricamento ordini:', error);
+        document.getElementById('orders-container').innerHTML = 
+          '<div class="no-orders">❌ Errore caricamento ordini</div>';
+      }
+    }
+
+    async function completeOrder(id) {
+      if (!confirm('✅ Completare questo ordine?')) return;
+      
+      try {
+        const res = await fetch(`/orders/${id}/complete`, { method: 'POST' });
+        if (res.ok) {
+          showToast('✅ Ordine completato con successo');
+          loadOrders();
+        } else {
+          showToast('❌ Errore completamento ordine', true);
+        }
+      } catch (error) {
+        showToast(`❌ Errore: ${error.message}`, true);
+      }
+    }
+
+    async function deleteOrder(id) {
+      if (!confirm('🗑️ Eliminare questo ordine?')) return;
+      
+      try {
+        const res = await fetch(`/orders/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+          showToast('🗑️ Ordine eliminato');
+          loadOrders();
+        } else {
+          showToast('❌ Errore eliminazione ordine', true);
+        }
+      } catch (error) {
+        showToast(`❌ Errore: ${error.message}`, true);
+      }
+    }
+
+    async function reprint(id) {
+      try {
+        const res = await fetch(`/orders/${id}/reprint`, { method: 'POST' });
+        if (res.ok) {
+          showToast('🖨️ Ordine inviato alle stampanti');
+        } else {
+          showToast('❌ Errore ristampa', true);
+        }
+      } catch (error) {
+        showToast(`❌ Errore: ${error.message}`, true);
+      }
+    }
+
+    // Chiudi modal con click fuori
+    document.getElementById('orderModal').addEventListener('click', (e) => {
+      if (e.target.id === 'orderModal') {
+        closeModal();
+      }
+    });
+
+    document.getElementById('splitModal').addEventListener('click', (e) => {
+      if (e.target.id === 'splitModal') {
+        closeSplitModal();
+      }
+    });
+
+    // Chiudi modal con ESC
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeModal();
+        closeSplitModal();
+      }
+    });
+
+    // Avvia caricamento iniziale
+    loadOrders();
+  </script>
+</body>
+</html>

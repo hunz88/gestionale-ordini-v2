@@ -1,0 +1,1081 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>Sunset Bar - Presa Ordini</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* HEADER */
+    .header {
+      background: rgba(255,255,255,0.95);
+      padding: 1rem;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .header h1 { font-size: 1.3rem; color: #2d3748; }
+    .header-buttons { display: flex; gap: 0.5rem; }
+    .header-buttons button {
+      padding: 0.5rem 0.8rem;
+      border: none;
+      border-radius: 0.5rem;
+      background: #667eea;
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+
+    /* CONTAINER */
+    .container {
+      padding: 1rem;
+      padding-bottom: 200px;
+    }
+
+    /* SALE SU 1 RIGA - SCROLL ORIZZONTALE */
+    .sale-row {
+      display: flex;
+      gap: 0.8rem;
+      overflow-x: auto;
+      padding-bottom: 0.5rem;
+      margin-bottom: 1rem;
+      -webkit-overflow-scrolling: touch;
+    }
+    .sale-row::-webkit-scrollbar {
+      height: 4px;
+    }
+    .sale-row::-webkit-scrollbar-thumb {
+      background: rgba(255,255,255,0.3);
+      border-radius: 2px;
+    }
+    
+    .sala-card {
+      background: white;
+      border-radius: 1rem;
+      min-width: 280px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+    .sala-header {
+      padding: 0.8rem 1rem;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: background 0.3s;
+    }
+    .sala-header:active {
+      background: #f7fafc;
+    }
+    .sala-info {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .sala-icona {
+      font-size: 1.5rem;
+    }
+    .sala-nome {
+      font-weight: bold;
+      font-size: 0.95rem;
+    }
+    .sala-count {
+      background: #e2e8f0;
+      padding: 0.2rem 0.6rem;
+      border-radius: 1rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      margin-left: 0.3rem;
+    }
+    .sala-arrow {
+      font-size: 1.2rem;
+      transition: transform 0.3s;
+      color: #667eea;
+    }
+    .sala-card.open .sala-arrow {
+      transform: rotate(90deg);
+    }
+    
+    /* FIX: Tavoli inizialmente nascosti, poi visibili */
+    .sala-tavoli {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease-out;
+      padding: 0 0.8rem;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0.6rem;
+    }
+    .sala-card.open .sala-tavoli {
+      max-height: 500px;
+      padding: 0.8rem;
+      padding-top: 0;
+    }
+    
+    .tavolo-btn {
+      aspect-ratio: 1;
+      border: 2px solid #e2e8f0;
+      border-radius: 0.6rem;
+      background: white;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 1rem;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .tavolo-btn:active {
+      transform: scale(0.95);
+    }
+    .tavolo-btn.selected {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border-color: #667eea;
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+
+    /* TASTIERINO TOGGLE */
+    .tastierino-toggle {
+      width: 100%;
+      padding: 1rem;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 1rem;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 1.1rem;
+      margin-bottom: 1rem;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+    .tastierino-toggle:active {
+      transform: scale(0.98);
+    }
+
+    /* TASTIERINO ORDINATO - NUMERI CENTRATI */
+    .tastierino-section {
+      background: white;
+      border-radius: 1rem;
+      padding: 1.5rem;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      margin-bottom: 1rem;
+      display: none;
+    }
+    .tastierino-section.show { display: block; }
+    .tastierino-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+      max-width: 400px;
+      margin: 0 auto;
+    }
+    .tastierino-btn {
+      height: 60px;
+      border: 2px solid #e2e8f0;
+      border-radius: 0.8rem;
+      background: white;
+      font-size: 2rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .tastierino-btn:active {
+      background: #667eea;
+      color: white;
+      transform: scale(0.95);
+    }
+    .tastierino-btn.zero { 
+      grid-column: span 2;
+    }
+    .tastierino-btn.clear {
+      background: #fc8181;
+      color: white;
+      border-color: #fc8181;
+      font-size: 2.5rem;
+      line-height: 1;
+    }
+    .tastierino-btn.clear:active {
+      background: #e35555;
+    }
+
+    /* MENU CATEGORIE */
+    .menu-section {
+      background: white;
+      border-radius: 1rem;
+      padding: 1rem;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      margin-bottom: 1rem;
+    }
+    .menu-title {
+      font-size: 1.2rem;
+      font-weight: bold;
+      margin-bottom: 1rem;
+      color: #2d3748;
+    }
+    
+    /* SEZIONE CATEGORIE CON BORDO */
+    .categories-container {
+      background: #f7fafc;
+      border: 2px solid #e2e8f0;
+      border-radius: 0.8rem;
+      padding: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .categories-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #667eea;
+      margin-bottom: 0.8rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .categories-label::before {
+      content: '📂';
+      font-size: 1rem;
+    }
+    
+    .menu-categories {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.8rem;
+    }
+    .category-btn {
+      padding: 1rem;
+      border: 2px solid #e2e8f0;
+      border-radius: 0.8rem;
+      background: white;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s;
+      font-size: 0.85rem;
+    }
+    .category-btn:active {
+      transform: scale(0.95);
+    }
+    .category-btn.active {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border-color: #667eea;
+    }
+
+    /* DIVISORE TRA CATEGORIE E ARTICOLI */
+    .items-divider {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin: 1.5rem 0 1rem 0;
+    }
+    .items-divider::before,
+    .items-divider::after {
+      content: '';
+      flex: 1;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, #667eea, transparent);
+    }
+    .items-divider-text {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #667eea;
+      white-space: nowrap;
+    }
+
+    /* ARTICOLI */
+    .items-section {
+      background: #faf5ff;
+      border: 2px dashed #d6bcfa;
+      border-radius: 0.8rem;
+      padding: 1rem;
+    }
+    .items-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.8rem;
+    }
+    .item-btn {
+      padding: 1rem;
+      border: 2px solid #e2e8f0;
+      border-radius: 0.8rem;
+      background: white;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s;
+    }
+    .item-btn:active {
+      transform: scale(0.95);
+      background: #f7fafc;
+    }
+    .item-name {
+      font-weight: 600;
+      font-size: 0.9rem;
+      margin-bottom: 0.5rem;
+      color: #2d3748;
+      min-height: 2.5em;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .item-price {
+      color: #667eea;
+      font-weight: bold;
+      font-size: 1rem;
+    }
+
+    /* CARRELLO FISSO */
+    .carrello-fixed {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: white;
+      border-radius: 1rem 1rem 0 0;
+      box-shadow: 0 -4px 12px rgba(0,0,0,0.2);
+      max-height: 50vh;
+      display: flex;
+      flex-direction: column;
+      z-index: 1000;
+    }
+    .carrello-header {
+      padding: 1rem;
+      border-bottom: 2px solid #e2e8f0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+    }
+    .carrello-title {
+      font-size: 1.2rem;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .tavolo-display {
+      padding: 0.4rem 0.8rem;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border-radius: 0.5rem;
+      font-weight: bold;
+      font-size: 0.9rem;
+    }
+    .carrello-expand {
+      font-size: 1.5rem;
+      transition: transform 0.3s;
+    }
+    .carrello-fixed.expanded .carrello-expand {
+      transform: rotate(180deg);
+    }
+    .carrello-content {
+      overflow-y: auto;
+      flex: 1;
+      padding: 1rem;
+      display: none;
+    }
+    .carrello-fixed.expanded .carrello-content {
+      display: block;
+    }
+    .carrello-item {
+      padding: 1rem;
+      border: 2px solid #e2e8f0;
+      border-radius: 0.8rem;
+      margin-bottom: 0.8rem;
+      background: #f7fafc;
+    }
+    .carrello-item-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 0.5rem;
+    }
+    .carrello-item-name { font-weight: 600; }
+    .carrello-item-price { color: #667eea; font-weight: bold; }
+    .carrello-controls {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      margin-top: 0.5rem;
+    }
+    .qty-btn {
+      width: 2.5rem;
+      height: 2.5rem;
+      border: 2px solid #667eea;
+      border-radius: 0.5rem;
+      background: white;
+      color: #667eea;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 1.2rem;
+    }
+    .qty-display {
+      font-weight: bold;
+      font-size: 1.1rem;
+      min-width: 2rem;
+      text-align: center;
+    }
+    .btn-remove {
+      margin-left: auto;
+      padding: 0.5rem 1rem;
+      background: #fc8181;
+      color: white;
+      border: none;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+    .btn-personalizza {
+      padding: 0.5rem 1rem;
+      background: #667eea;
+      color: white;
+      border: none;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+    .item-note {
+      font-size: 0.8rem;
+      color: #718096;
+      margin-top: 0.5rem;
+      font-style: italic;
+    }
+    .carrello-footer {
+      padding: 1rem;
+      border-top: 2px solid #e2e8f0;
+      background: white;
+    }
+    .totale {
+      display: flex;
+      justify-content: space-between;
+      font-size: 1.3rem;
+      font-weight: bold;
+      margin-bottom: 1rem;
+    }
+    .btn-invia {
+      width: 100%;
+      padding: 1rem;
+      background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+      color: white;
+      border: none;
+      border-radius: 0.8rem;
+      font-weight: bold;
+      font-size: 1.1rem;
+      cursor: pointer;
+    }
+    .btn-invia:disabled {
+      background: #cbd5e0;
+      cursor: not-allowed;
+    }
+
+    /* MODAL */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      z-index: 2000;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    .modal.show { display: flex; }
+    .modal-content {
+      background: white;
+      border-radius: 1rem;
+      padding: 1.5rem;
+      max-height: 80vh;
+      overflow-y: auto;
+      width: 100%;
+      max-width: 500px;
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+      padding-bottom: 1rem;
+      border-bottom: 2px solid #e2e8f0;
+    }
+    .modal-title { font-size: 1.3rem; font-weight: bold; }
+    .btn-close {
+      background: none;
+      border: none;
+      font-size: 2rem;
+      cursor: pointer;
+    }
+    .personalizza-section { margin-bottom: 1.5rem; }
+    .personalizza-section h3 {
+      font-size: 1rem;
+      margin-bottom: 0.8rem;
+    }
+    .aggiunte-grid, .rimozioni-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 0.8rem;
+    }
+    .aggiunta-item, .rimozione-item {
+      padding: 0.8rem;
+      border: 2px solid #e2e8f0;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .aggiunta-item.selected {
+      background: #667eea;
+      color: white;
+    }
+    .rimozione-item.selected {
+      background: #fc8181;
+      color: white;
+    }
+    .note-input {
+      width: 100%;
+      padding: 0.8rem;
+      border: 2px solid #e2e8f0;
+      border-radius: 0.5rem;
+      font-size: 1rem;
+      margin-bottom: 1rem;
+    }
+    .btn-conferma {
+      width: 100%;
+      padding: 1rem;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 0.5rem;
+      font-weight: bold;
+      font-size: 1.1rem;
+      cursor: pointer;
+    }
+
+    .empty-cart {
+      text-align: center;
+      color: #a0aec0;
+      padding: 2rem;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>🌅 Sunset Bar</h1>
+    <div class="header-buttons">
+      <button onclick="location.href='tablet.html'">💻</button>
+      <button onclick="location.href='/history.html'">📋</button>
+      <button onclick="location.href='/admin.html'">⚙️</button>
+    </div>
+  </div>
+
+  <div class="container">
+    <!-- SALE SU 1 RIGA -->
+    <div class="sale-row" id="sale-container"></div>
+
+    <!-- TOGGLE TASTIERINO -->
+    <button class="tastierino-toggle" onclick="toggleTastierino()">
+      <span id="tastierino-icon">📱</span> <span id="tastierino-text">Mostra Tastierino</span>
+    </button>
+
+    <!-- TASTIERINO ORDINATO -->
+    <div class="tastierino-section" id="tastierino">
+      <div class="tastierino-grid">
+        <button class="tastierino-btn" onclick="aggiungiCifra('1')">1</button>
+        <button class="tastierino-btn" onclick="aggiungiCifra('2')">2</button>
+        <button class="tastierino-btn" onclick="aggiungiCifra('3')">3</button>
+        <button class="tastierino-btn" onclick="aggiungiCifra('4')">4</button>
+        <button class="tastierino-btn" onclick="aggiungiCifra('5')">5</button>
+        <button class="tastierino-btn" onclick="aggiungiCifra('6')">6</button>
+        <button class="tastierino-btn" onclick="aggiungiCifra('7')">7</button>
+        <button class="tastierino-btn" onclick="aggiungiCifra('8')">8</button>
+        <button class="tastierino-btn" onclick="aggiungiCifra('9')">9</button>
+        <button class="tastierino-btn zero" onclick="aggiungiCifra('0')">0</button>
+        <button class="tastierino-btn clear" onclick="cancellaCifra()">←</button>
+      </div>
+    </div>
+
+    <!-- MENU -->
+    <div class="menu-section">
+      <div class="menu-title">📋 Menu</div>
+      
+      <!-- CATEGORIE -->
+      <div class="categories-container">
+        <div class="categories-label">Categorie Menu</div>
+        <div class="menu-categories" id="menu-categories"></div>
+      </div>
+      
+      <!-- DIVISORE -->
+      <div class="items-divider">
+        <div class="items-divider-text">🍽️ Articoli</div>
+      </div>
+      
+      <!-- ARTICOLI -->
+      <div class="items-section">
+        <div class="items-grid" id="items-grid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CARRELLO FISSO -->
+  <div class="carrello-fixed" id="carrello">
+    <div class="carrello-header" onclick="toggleCarrello()">
+      <div class="carrello-title">
+        🛒 Carrello
+        <span class="carrello-expand" id="carrello-arrow">▲</span>
+      </div>
+      <div class="tavolo-display" id="tavolo-display">-</div>
+    </div>
+    <div class="carrello-content" id="carrello-items">
+      <div class="empty-cart">Seleziona tavolo e aggiungi articoli</div>
+    </div>
+    <div class="carrello-footer">
+      <div class="totale">
+        <span>TOTALE:</span>
+        <span id="totale-display">€0.00</span>
+      </div>
+      <button class="btn-invia" id="btn-invia" onclick="inviaOrdine()" disabled>
+        📤 Invia Ordine
+      </button>
+    </div>
+  </div>
+
+  <!-- MODAL -->
+  <div class="modal" id="modal-personalizza">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-title" id="modal-item-name">Personalizza</div>
+        <button class="btn-close" onclick="chiudiModal()">×</button>
+      </div>
+      <div id="modal-body"></div>
+    </div>
+  </div>
+
+  <script>
+    let tavoloSelezionato = '';
+    let menuData = [];
+    let aggiunte = {};
+    let rimozioni = {};
+    let carrello = [];
+    let currentCategory = '';
+    let itemInEdit = null;
+    let inputTavolo = '';
+    let saleData = [];
+
+    async function init() {
+      await Promise.all([loadSale(), loadMenu(), loadAggiunte(), loadRimozioni()]);
+    }
+
+    async function loadSale() {
+      try {
+        const res = await fetch('/api/configurazione-sale');
+        saleData = await res.json();
+        renderSale();
+      } catch (e) {
+        console.error('Errore:', e);
+      }
+    }
+
+    function renderSale() {
+      const container = document.getElementById('sale-container');
+      let html = '';
+      saleData.forEach(sala => {
+        html += `
+          <div class="sala-card" id="sala-${sala.codice_sala}">
+            <div class="sala-header" onclick="toggleSala('${sala.codice_sala}')">
+              <div class="sala-info">
+                <span class="sala-icona">${sala.icona}</span>
+                <div>
+                  <div class="sala-nome">${sala.nome_sala}</div>
+                  <span class="sala-count">${sala.numero_tavoli} tavoli</span>
+                </div>
+              </div>
+              <span class="sala-arrow">▶</span>
+            </div>
+            <div class="sala-tavoli">`;
+        sala.tavoli.forEach(tavolo => {
+          html += `<button class="tavolo-btn" data-tavolo="${tavolo.numero}"
+                    onclick="selezionaTavolo('${tavolo.numero}')">${tavolo.numero}</button>`;
+        });
+        html += `</div></div>`;
+      });
+      container.innerHTML = html;
+    }
+
+    function toggleSala(codice) {
+      const sala = document.getElementById('sala-' + codice);
+      sala.classList.toggle('open');
+    }
+
+    function toggleTastierino() {
+      const tastierino = document.getElementById('tastierino');
+      const icon = document.getElementById('tastierino-icon');
+      const text = document.getElementById('tastierino-text');
+      if (tastierino.classList.contains('show')) {
+        tastierino.classList.remove('show');
+        icon.textContent = '📱';
+        text.textContent = 'Mostra Tastierino';
+      } else {
+        tastierino.classList.add('show');
+        icon.textContent = '❌';
+        text.textContent = 'Nascondi Tastierino';
+      }
+    }
+
+    function toggleCarrello() {
+      document.getElementById('carrello').classList.toggle('expanded');
+    }
+
+    function aggiungiCifra(cifra) {
+      if (inputTavolo.length < 3) {
+        inputTavolo += cifra;
+        selezionaTavolo(inputTavolo);
+      }
+    }
+
+    function cancellaCifra() {
+      if (inputTavolo.length > 0) {
+        inputTavolo = inputTavolo.slice(0, -1);
+        if (inputTavolo.length > 0) {
+          selezionaTavolo(inputTavolo);
+        } else {
+          tavoloSelezionato = '';
+          document.querySelectorAll('.tavolo-btn').forEach(btn => btn.classList.remove('selected'));
+          updateDisplay();
+        }
+      }
+    }
+
+    function selezionaTavolo(numero) {
+      inputTavolo = numero;
+      tavoloSelezionato = numero;
+      document.querySelectorAll('.tavolo-btn').forEach(btn => {
+        btn.classList.remove('selected');
+        if (btn.dataset.tavolo === numero) btn.classList.add('selected');
+      });
+      updateDisplay();
+    }
+
+    async function loadMenu() {
+      try {
+        const res = await fetch('/menu');
+        menuData = await res.json();
+        renderMenuCategories();
+      } catch (e) {
+        console.error('Errore:', e);
+      }
+    }
+
+    function renderMenuCategories() {
+      const gruppi = [...new Set(menuData.map(item => item.gruppo))];
+      const container = document.getElementById('menu-categories');
+      let html = '';
+      gruppi.forEach(gruppo => {
+        html += `<button class="category-btn ${gruppo === currentCategory ? 'active' : ''}" 
+                  onclick="selectCategory('${gruppo}')">${gruppo}</button>`;
+      });
+      container.innerHTML = html;
+      if (!currentCategory && gruppi.length > 0) selectCategory(gruppi[0]);
+    }
+
+    function selectCategory(cat) {
+      currentCategory = cat;
+      renderMenuCategories();
+      renderItems();
+    }
+
+    function renderItems() {
+      const items = menuData.filter(item => item.gruppo === currentCategory);
+      const grid = document.getElementById('items-grid');
+      let html = '';
+      items.forEach(item => {
+        html += `
+          <div class="item-btn" onclick='aggiungiAlCarrello(${JSON.stringify(item)})'>
+            <div class="item-name">${item.nome}</div>
+            <div class="item-price">€${item.prezzo.toFixed(2)}</div>
+          </div>`;
+      });
+      grid.innerHTML = html;
+    }
+
+    async function loadAggiunte() {
+      try {
+        const res = await fetch('/api/aggiunte');
+        aggiunte = await res.json();
+      } catch (e) {
+        console.error('Errore:', e);
+      }
+    }
+
+    async function loadRimozioni() {
+      try {
+        const res = await fetch('/api/rimozioni');
+        rimozioni = await res.json();
+      } catch (e) {
+        console.error('Errore:', e);
+      }
+    }
+
+    function aggiungiAlCarrello(item) {
+      if (!tavoloSelezionato) {
+        alert('⚠️ Seleziona un tavolo!');
+        return;
+      }
+      const existing = carrello.find(c => 
+        c.id === item.id && 
+        JSON.stringify(c.aggiunte || []) === '[]' &&
+        JSON.stringify(c.rimozioni || []) === '[]' && !c.note
+      );
+      if (existing) {
+        existing.qty++;
+      } else {
+        carrello.push({...item, qty: 1, aggiunte: [], rimozioni: [], note: ''});
+      }
+      updateDisplay();
+    }
+
+    function modificaQty(index, delta) {
+      carrello[index].qty += delta;
+      if (carrello[index].qty <= 0) carrello.splice(index, 1);
+      updateDisplay();
+    }
+
+    function rimuoviDalCarrello(index) {
+      carrello.splice(index, 1);
+      updateDisplay();
+    }
+
+    function personalizzaItem(index) {
+      itemInEdit = index;
+      const item = carrello[index];
+      let html = `
+        <div class="personalizza-section">
+          <h3>➕ Aggiunte</h3>
+          <div class="aggiunte-grid" id="aggiunte-grid"></div>
+        </div>
+        <div class="personalizza-section">
+          <h3>➖ Rimozioni</h3>
+          <div class="rimozioni-grid" id="rimozioni-grid"></div>
+        </div>
+        <div class="personalizza-section">
+          <h3>📝 Note</h3>
+          <textarea class="note-input" id="note-input" rows="3">${item.note || ''}</textarea>
+        </div>
+        <button class="btn-conferma" onclick="confermaPersonalizzazione()">✅ Conferma</button>`;
+      
+      document.getElementById('modal-item-name').textContent = item.nome;
+      document.getElementById('modal-body').innerHTML = html;
+      
+      let aggHtml = '';
+      Object.keys(aggiunte).forEach(cat => {
+        aggiunte[cat].forEach(agg => {
+          const isSelected = item.aggiunte.some(a => a.id === agg.id);
+          aggHtml += `<div class="aggiunta-item ${isSelected ? 'selected' : ''}" 
+                       onclick="toggleAggiunta(${agg.id}, '${agg.nome}', ${agg.prezzo})">
+                       ${agg.nome} <strong>+€${agg.prezzo.toFixed(2)}</strong></div>`;
+        });
+      });
+      document.getElementById('aggiunte-grid').innerHTML = aggHtml;
+      
+      let rimHtml = '';
+      Object.keys(rimozioni).forEach(cat => {
+        rimozioni[cat].forEach(rim => {
+          const isSelected = item.rimozioni.some(r => r.id === rim.id);
+          rimHtml += `<div class="rimozione-item ${isSelected ? 'selected' : ''}" 
+                       onclick="toggleRimozione(${rim.id}, '${rim.nome}')">${rim.nome}</div>`;
+        });
+      });
+      document.getElementById('rimozioni-grid').innerHTML = rimHtml;
+      
+      document.getElementById('modal-personalizza').classList.add('show');
+    }
+
+    function apriNoteItem(index) {
+      itemInEdit = index;
+      const item = carrello[index];
+      let html = `
+        <div class="personalizza-section">
+          <h3>📝 Note per: ${item.nome}</h3>
+          <textarea class="note-input" id="note-input-simple" rows="4" placeholder="Scrivi qui le note per questo articolo...">${item.note || ''}</textarea>
+        </div>
+        <button class="btn-conferma" onclick="confermaNoteSemplice()">✅ Salva Note</button>`;
+      
+      document.getElementById('modal-item-name').textContent = item.nome;
+      document.getElementById('modal-body').innerHTML = html;
+      document.getElementById('modal-personalizza').classList.add('show');
+    }
+
+    function toggleAggiunta(id, nome, prezzo) {
+      const item = carrello[itemInEdit];
+      const index = item.aggiunte.findIndex(a => a.id === id);
+      if (index >= 0) {
+        item.aggiunte.splice(index, 1);
+      } else {
+        item.aggiunte.push({ id, nome, prezzo });
+      }
+      personalizzaItem(itemInEdit);
+    }
+
+    function toggleRimozione(id, nome) {
+      const item = carrello[itemInEdit];
+      const index = item.rimozioni.findIndex(r => r.id === id);
+      if (index >= 0) {
+        item.rimozioni.splice(index, 1);
+      } else {
+        item.rimozioni.push({ id, nome });
+      }
+      personalizzaItem(itemInEdit);
+    }
+
+    function confermaPersonalizzazione() {
+      const note = document.getElementById('note-input').value.trim();
+      carrello[itemInEdit].note = note;
+      chiudiModal();
+      updateDisplay();
+    }
+
+    function confermaNoteSemplice() {
+      const note = document.getElementById('note-input-simple').value.trim();
+      carrello[itemInEdit].note = note;
+      chiudiModal();
+      updateDisplay();
+    }
+
+    function chiudiModal() {
+      document.getElementById('modal-personalizza').classList.remove('show');
+      itemInEdit = null;
+    }
+
+    function updateDisplay() {
+      document.getElementById('tavolo-display').textContent = 
+        tavoloSelezionato ? `Tavolo ${tavoloSelezionato}` : '-';
+      
+      const container = document.getElementById('carrello-items');
+      if (carrello.length === 0) {
+        container.innerHTML = '<div class="empty-cart">Seleziona tavolo e aggiungi articoli</div>';
+      } else {
+        let html = '';
+        carrello.forEach((item, index) => {
+          const prezzoBase = item.prezzo * item.qty;
+          const costoAggiunte = item.aggiunte.reduce((sum, a) => sum + (a.prezzo * item.qty), 0);
+          const totaleItem = prezzoBase + costoAggiunte;
+          
+          let noteHtml = '';
+          if (item.aggiunte.length > 0) {
+            noteHtml += `<div class="item-note">+ ${item.aggiunte.map(a => a.nome).join(', ')}</div>`;
+          }
+          if (item.rimozioni.length > 0) {
+            noteHtml += `<div class="item-note">− ${item.rimozioni.map(r => r.nome).join(', ')}</div>`;
+          }
+          if (item.note) {
+            noteHtml += `<div class="item-note">📝 ${item.note}</div>`;
+          }
+          
+          html += `
+            <div class="carrello-item">
+              <div class="carrello-item-header">
+                <div class="carrello-item-name">${item.nome}</div>
+                <div class="carrello-item-price">€${totaleItem.toFixed(2)}</div>
+              </div>
+              ${noteHtml}
+              <div class="carrello-controls">
+                <button class="qty-btn" onclick="modificaQty(${index}, -1)">−</button>
+                <div class="qty-display">${item.qty}</div>
+                <button class="qty-btn" onclick="modificaQty(${index}, 1)">+</button>
+                <button class="btn-personalizza" onclick="apriNoteItem(${index})">📝</button>
+                <button class="btn-personalizza" onclick="personalizzaItem(${index})">🎨</button>
+                <button class="btn-remove" onclick="rimuoviDalCarrello(${index})">🗑️</button>
+              </div>
+            </div>`;
+        });
+        container.innerHTML = html;
+      }
+      
+      const totale = carrello.reduce((sum, item) => {
+        const prezzoBase = item.prezzo * item.qty;
+        const costoAggiunte = item.aggiunte.reduce((s, a) => s + (a.prezzo * item.qty), 0);
+        return sum + prezzoBase + costoAggiunte;
+      }, 0);
+      
+      document.getElementById('totale-display').textContent = `€${totale.toFixed(2)}`;
+      document.getElementById('btn-invia').disabled = !tavoloSelezionato || carrello.length === 0;
+    }
+
+    async function inviaOrdine() {
+      if (!tavoloSelezionato || carrello.length === 0) return;
+      
+      let testo = '';
+      carrello.forEach(item => {
+        const prezzoBase = item.prezzo * item.qty;
+        const costoAggiunte = item.aggiunte.reduce((sum, a) => sum + (a.prezzo * item.qty), 0);
+        const totaleItem = prezzoBase + costoAggiunte;
+        let riga = `${item.qty}× ${item.nome}`;
+        if (item.aggiunte.length > 0 || item.rimozioni.length > 0 || item.note) {
+          const details = [];
+          if (item.aggiunte.length > 0) details.push(`+ ${item.aggiunte.map(a => a.nome).join(', ')}`);
+          if (item.rimozioni.length > 0) details.push(`− ${item.rimozioni.map(r => r.nome).join(', ')}`);
+          if (item.note) details.push(item.note);
+          riga += ` (${details.join(' | ')})`;
+        }
+        riga += ` – €${totaleItem.toFixed(2)}`;
+        testo += riga + '\n';
+      });
+      
+      try {
+        const res = await fetch('/orders', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tavolo: tavoloSelezionato,
+            comanda: testo,
+            items: carrello.map(item => ({
+              id: item.id,
+              nome: item.nome,
+              gruppo: item.gruppo,
+              prezzo: item.prezzo,
+              qty: item.qty,
+              note: [
+                ...(item.aggiunte || []).map(a => `+ ${a.nome}`),
+                ...(item.rimozioni || []).map(r => `− ${r.nome}`),
+                item.note
+              ].filter(Boolean).join(' | ')
+            }))
+          })
+        });
+        
+        if (res.ok) {
+          alert('✅ Ordine inviato!');
+          carrello = [];
+          tavoloSelezionato = '';
+          inputTavolo = '';
+          document.querySelectorAll('.tavolo-btn').forEach(btn => btn.classList.remove('selected'));
+          updateDisplay();
+        } else {
+          alert('❌ Errore invio');
+        }
+      } catch (e) {
+        alert('❌ Errore: ' + e.message);
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>

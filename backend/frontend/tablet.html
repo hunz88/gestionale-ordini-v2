@@ -1,0 +1,1085 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#667eea">
+  <title>Sunset Bar - Tablet Mode</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      overflow: hidden;
+      /* Safe area per barre di sistema */
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    /* HEADER */
+    .header {
+      background: rgba(255,255,255,0.95);
+      padding: 0.8rem 1.3rem;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 100;
+    }
+    .header h1 { 
+      font-size: 1.6rem; 
+      color: #2d3748;
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+    }
+    .mode-badge {
+      background: #667eea;
+      color: white;
+      padding: 0.35rem 0.8rem;
+      border-radius: 1rem;
+      font-size: 0.7rem;
+      font-weight: 600;
+    }
+    .header-buttons { 
+      display: flex; 
+      gap: 0.6rem; 
+    }
+    .header-buttons button {
+      padding: 0.7rem 1.2rem;
+      border: none;
+      border-radius: 0.6rem;
+      background: #667eea;
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 1rem;
+      transition: all 0.2s;
+    }
+    .header-buttons button:active {
+      transform: scale(0.95);
+    }
+
+    /* LAYOUT A 3 COLONNE */
+    .main-container {
+      display: grid;
+      grid-template-columns: 320px 1fr 300px;
+      gap: 0.8rem;
+      padding: 0.8rem;
+      padding-bottom: 60px; /* Giusto spazio per la barra Android */
+      height: calc(100vh - 130px); /* Bilanciato */
+      overflow: hidden;
+    }
+
+    /* ==================== COLONNA SINISTRA ==================== */
+    .left-column {
+      display: flex;
+      flex-direction: column;
+      gap: 1.2rem;
+      overflow-y: auto;
+    }
+    
+    /* TASTIERINO TAVOLO */
+    .tavolo-section {
+      background: white;
+      border-radius: 1rem;
+      padding: 0.8rem;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+    .section-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: #667eea;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .tavolo-display-big {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 0.8rem;
+      border-radius: 0.7rem;
+      text-align: center;
+      font-size: 1.8rem;
+      font-weight: bold;
+      margin-bottom: 0.6rem;
+      min-height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.3s;
+      position: relative;
+    }
+    .tavolo-display-big:hover {
+      transform: scale(1.02);
+    }
+    .tavolo-toggle-icon {
+      position: absolute;
+      right: 0.8rem;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 1.1rem;
+      transition: transform 0.3s;
+    }
+    .tastierino-collapsed .tavolo-toggle-icon {
+      transform: translateY(-50%) rotate(180deg);
+    }
+    
+    /* PULSANTI TAVOLI RAPIDI */
+    .tavoli-rapidi-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0.5rem;
+      margin-bottom: 0.6rem;
+    }
+    .tavolo-rapido-btn {
+      padding: 0.7rem 0.3rem;
+      border: 2px solid #f59e0b;
+      border-radius: 0.6rem;
+      background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+      cursor: pointer;
+      font-weight: 800;
+      font-size: 1.1rem;
+      transition: all 0.2s;
+      text-align: center;
+      color: #92400e;
+    }
+    .tavolo-rapido-btn:active {
+      transform: scale(0.95);
+      background: linear-gradient(135deg, #fde68a 0%, #fcd34d 100%);
+    }
+    
+    /* TASTIERINO NUMERICO */
+    .tastierino-grid-tablet {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.5rem;
+      max-height: 200px;
+      overflow: hidden;
+      transition: max-height 0.3s ease-out, opacity 0.3s;
+      opacity: 1;
+    }
+    .tastierino-collapsed .tastierino-grid-tablet {
+      max-height: 0;
+      opacity: 0;
+      margin: 0;
+    }
+    .tastierino-btn-tablet {
+      height: 48px;
+      border: 2px solid #e2e8f0;
+      border-radius: 0.6rem;
+      background: white;
+      font-size: 1.5rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .tastierino-btn-tablet:active {
+      background: #667eea;
+      color: white;
+      transform: scale(0.95);
+    }
+    .tastierino-btn-tablet.zero { 
+      grid-column: span 2;
+    }
+    .tastierino-btn-tablet.clear {
+      background: #fc8181;
+      color: white;
+      border-color: #fc8181;
+      font-size: 2rem;
+    }
+    .tastierino-btn-tablet.clear:active {
+      background: #e35555;
+    }
+
+    /* CATEGORIE */
+    .categories-section {
+      background: white;
+      border-radius: 1rem;
+      padding: 1rem;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      flex: 1;
+      overflow-y: auto;
+    }
+    .category-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.7rem;
+    }
+    .category-item {
+      padding: 1.1rem;
+      border: 2px solid #e2e8f0;
+      border-radius: 0.7rem;
+      background: white;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 1rem;
+      transition: all 0.2s;
+      text-align: left;
+    }
+    .category-item:active {
+      transform: translateX(5px);
+    }
+    .category-item.active {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border-color: #667eea;
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    }
+
+    /* ==================== COLONNA CENTRALE ==================== */
+    .center-column {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      overflow: hidden;
+    }
+
+    /* TASTI RAPIDI - NASCOSTI (Si usa una categoria dedicata) */
+    .quick-access {
+      display: none !important;
+    }
+
+    /* ARTICOLI */
+    .items-section {
+      background: white;
+      border-radius: 1rem;
+      padding: 1rem;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+    }
+    .items-header {
+      margin-bottom: 1rem;
+      padding-bottom: 0.8rem;
+      border-bottom: 2px solid #e2e8f0;
+    }
+    .items-title {
+      font-size: 1.1rem;
+      font-weight: bold;
+      color: #2d3748;
+    }
+    .items-grid-tablet {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0.75rem;
+    }
+    .item-card {
+      padding: 1rem;
+      border: 2px solid #e2e8f0;
+      border-radius: 0.75rem;
+      background: white;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      min-height: 88px;
+    }
+    .item-card:hover {
+      background: #f7fafc;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.12);
+      border-color: #667eea;
+    }
+    .item-card:active {
+      transform: scale(0.95);
+    }
+    .item-name-tablet {
+      font-weight: 700;
+      font-size: 0.92rem;
+      margin-bottom: 0.4rem;
+      color: #2d3748;
+      line-height: 1.2;
+    }
+    .item-price-tablet {
+      font-size: 1.15rem;
+      font-weight: bold;
+      color: #667eea;
+    }
+
+    /* ==================== COLONNA DESTRA ==================== */
+    .right-column {
+      background: white;
+      border-radius: 1rem;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      max-height: 100%;
+    }
+    .carrello-header-tablet {
+      padding: 0.7rem;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      font-size: 1.05rem;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .carrello-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0.7rem;
+    }
+    .carrello-item-tablet {
+      background: #f7fafc;
+      border-radius: 0.6rem;
+      padding: 0.65rem;
+      margin-bottom: 0.65rem;
+      border: 2px solid #e2e8f0;
+    }
+    .carrello-item-header-tablet {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.4rem;
+    }
+    .carrello-item-name-tablet {
+      font-weight: 600;
+      font-size: 0.85rem;
+      color: #2d3748;
+      line-height: 1.2;
+    }
+    .carrello-item-price-tablet {
+      font-weight: bold;
+      font-size: 0.9rem;
+      color: #667eea;
+    }
+    .carrello-controls-tablet {
+      display: flex;
+      gap: 0.35rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .qty-btn-tablet {
+      width: 30px;
+      height: 30px;
+      border: 2px solid #e2e8f0;
+      border-radius: 0.4rem;
+      background: white;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 1.05rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+    .qty-btn-tablet:active {
+      background: #667eea;
+      color: white;
+      transform: scale(0.9);
+    }
+    .qty-display-tablet {
+      padding: 0.25rem 0.55rem;
+      font-weight: bold;
+      font-size: 0.9rem;
+      min-width: 32px;
+      text-align: center;
+    }
+    .btn-action-tablet {
+      padding: 0.32rem 0.45rem;
+      border: none;
+      border-radius: 0.35rem;
+      cursor: pointer;
+      font-size: 0.88rem;
+      transition: all 0.2s;
+    }
+    .btn-action-tablet:active {
+      transform: scale(0.9);
+    }
+    .btn-note-tablet {
+      background: #667eea;
+      color: white;
+    }
+    .btn-edit-tablet {
+      background: #8b5cf6;
+      color: white;
+    }
+    .btn-delete-tablet {
+      background: #fc8181;
+      color: white;
+      margin-left: auto;
+    }
+    .item-note-tablet {
+      font-size: 0.72rem;
+      color: #718096;
+      margin-top: 0.3rem;
+      font-style: italic;
+      line-height: 1.2;
+    }
+    .empty-cart-tablet {
+      text-align: center;
+      padding: 1.8rem 0.6rem;
+      color: #a0aec0;
+      font-size: 0.82rem;
+    }
+    .carrello-footer-tablet {
+      padding: 0.75rem;
+      padding-bottom: 0.75rem;
+      border-top: 2px solid #e2e8f0;
+      background: #fafafa;
+      flex-shrink: 0;
+    }
+    .totale-tablet {
+      display: flex;
+      justify-content: space-between;
+      font-size: 1.25rem;
+      font-weight: bold;
+      margin-bottom: 0.7rem;
+      color: #2d3748;
+    }
+    .btn-invia-tablet {
+      width: 100%;
+      padding: 0.85rem;
+      border: none;
+      border-radius: 0.65rem;
+      background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+      color: white;
+      font-weight: bold;
+      font-size: 1.05rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-invia-tablet:active {
+      transform: scale(0.98);
+    }
+    .btn-invia-tablet:disabled {
+      background: #cbd5e0;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* MODAL */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.7);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal.show { display: flex; }
+    .modal-content {
+      background: white;
+      border-radius: 1rem;
+      width: 90%;
+      max-width: 700px;
+      max-height: 85vh;
+      overflow-y: auto;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+    }
+    .modal-header {
+      padding: 1.5rem;
+      border-bottom: 2px solid #e2e8f0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .modal-title {
+      font-size: 1.4rem;
+      font-weight: bold;
+      color: #2d3748;
+    }
+    .btn-close {
+      width: 45px;
+      height: 45px;
+      border: none;
+      background: #fc8181;
+      color: white;
+      border-radius: 50%;
+      font-size: 1.8rem;
+      cursor: pointer;
+      line-height: 1;
+    }
+    .modal-body {
+      padding: 1.5rem;
+    }
+    .personalizza-section {
+      margin-bottom: 1.5rem;
+    }
+    .personalizza-section h3 {
+      margin-bottom: 0.8rem;
+      color: #2d3748;
+      font-size: 1.2rem;
+    }
+    .note-input {
+      width: 100%;
+      padding: 1rem;
+      border: 2px solid #e2e8f0;
+      border-radius: 0.6rem;
+      font-size: 1.1rem;
+      font-family: inherit;
+      resize: vertical;
+    }
+    .btn-conferma {
+      width: 100%;
+      padding: 1.2rem;
+      background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+      color: white;
+      border: none;
+      border-radius: 0.8rem;
+      font-weight: bold;
+      font-size: 1.2rem;
+      cursor: pointer;
+    }
+    .aggiunte-grid, .rimozioni-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.6rem;
+    }
+    .aggiunta-item, .rimozione-item {
+      padding: 1rem;
+      border: 2px solid #e2e8f0;
+      border-radius: 0.6rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+      font-size: 1rem;
+    }
+    .aggiunta-item.selected {
+      background: #667eea;
+      color: white;
+      border-color: #667eea;
+    }
+    .rimozione-item.selected {
+      background: #fc8181;
+      color: white;
+      border-color: #fc8181;
+    }
+
+    /* SCROLLBAR */
+    ::-webkit-scrollbar {
+      width: 10px;
+      height: 10px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e0;
+      border-radius: 5px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #a0aec0;
+    }
+  </style>
+</head>
+<body>
+  <!-- HEADER -->
+  <div class="header">
+    <h1>
+      🌅 Sunset Bar
+      <span class="mode-badge">TABLET MODE</span>
+    </h1>
+    <div class="header-buttons">
+      <button onclick="location.href='index.html'">📱 Mobile</button>
+      <button onclick="location.href='/history.html'">📋</button>
+      <button onclick="location.href='/admin.html'">⚙️</button>
+    </div>
+  </div>
+
+  <!-- LAYOUT A 3 COLONNE -->
+  <div class="main-container">
+    
+    <!-- COLONNA SINISTRA: TASTIERINO TAVOLO + CATEGORIE -->
+    <div class="left-column">
+      
+      <!-- TASTIERINO TAVOLO -->
+      <div class="tavolo-section tastierino-collapsed" id="tavolo-section">
+        <div class="section-label">🪑 Numero Tavolo</div>
+        <div class="tavolo-display-big" id="tavolo-display" onclick="toggleTastierino()">
+          -
+          <span class="tavolo-toggle-icon">▼</span>
+        </div>
+        
+        <!-- PULSANTI TAVOLI RAPIDI -->
+        <div class="tavoli-rapidi-grid">
+          <button class="tavolo-rapido-btn" onclick="selezionaTavoloRapido('500')">500</button>
+          <button class="tavolo-rapido-btn" onclick="selezionaTavoloRapido('501')">501</button>
+          <button class="tavolo-rapido-btn" onclick="selezionaTavoloRapido('502')">502</button>
+          <button class="tavolo-rapido-btn" onclick="selezionaTavoloRapido('503')">503</button>
+        </div>
+        
+        <!-- TASTIERINO NUMERICO (nascosto) -->
+        <div class="tastierino-grid-tablet">
+          <button class="tastierino-btn-tablet" onclick="digitTavolo('1')">1</button>
+          <button class="tastierino-btn-tablet" onclick="digitTavolo('2')">2</button>
+          <button class="tastierino-btn-tablet" onclick="digitTavolo('3')">3</button>
+          <button class="tastierino-btn-tablet" onclick="digitTavolo('4')">4</button>
+          <button class="tastierino-btn-tablet" onclick="digitTavolo('5')">5</button>
+          <button class="tastierino-btn-tablet" onclick="digitTavolo('6')">6</button>
+          <button class="tastierino-btn-tablet" onclick="digitTavolo('7')">7</button>
+          <button class="tastierino-btn-tablet" onclick="digitTavolo('8')">8</button>
+          <button class="tastierino-btn-tablet" onclick="digitTavolo('9')">9</button>
+          <button class="tastierino-btn-tablet zero" onclick="digitTavolo('0')">0</button>
+          <button class="tastierino-btn-tablet clear" onclick="clearTavolo()">×</button>
+        </div>
+      </div>
+
+      <!-- CATEGORIE -->
+      <div class="categories-section">
+        <div class="section-label">📂 Categorie Menu</div>
+        <div class="category-list" id="category-list"></div>
+      </div>
+    </div>
+
+    <!-- COLONNA CENTRALE: TASTI RAPIDI + ARTICOLI -->
+    <div class="center-column">
+      
+      <!-- TASTI RAPIDI -->
+      <div class="quick-access" id="quick-access">
+        <div class="section-label">⚡ Accesso Rapido</div>
+        <div class="quick-grid" id="quick-grid"></div>
+      </div>
+
+      <!-- ARTICOLI -->
+      <div class="items-section">
+        <div class="items-header">
+          <div class="items-title" id="items-title">🍽️ Articoli</div>
+        </div>
+        <div class="items-grid-tablet" id="items-grid"></div>
+      </div>
+    </div>
+
+    <!-- COLONNA DESTRA: CARRELLO -->
+    <div class="right-column">
+      <div class="carrello-header-tablet">🛒 Carrello</div>
+      <div class="carrello-list" id="carrello-list">
+        <div class="empty-cart-tablet">Seleziona tavolo e aggiungi articoli</div>
+      </div>
+      <div class="carrello-footer-tablet">
+        <div class="totale-tablet">
+          <span>TOTALE:</span>
+          <span id="totale-display">€0.00</span>
+        </div>
+        <button class="btn-invia-tablet" id="btn-invia" onclick="inviaOrdine()" disabled>
+          📤 Invia Ordine
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL PERSONALIZZAZIONE -->
+  <div class="modal" id="modal-personalizza">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-title" id="modal-item-name">Personalizza</div>
+        <button class="btn-close" onclick="chiudiModal()">×</button>
+      </div>
+      <div class="modal-body" id="modal-body"></div>
+    </div>
+  </div>
+
+  <script>
+    let tavoloSelezionato = '';
+    let inputTavolo = '';
+    let menuData = [];
+    let aggiunte = {};
+    let rimozioni = {};
+    let carrello = [];
+    let currentCategory = '';
+    let itemInEdit = null;
+    let tastiRapidi = [];
+
+    async function init() {
+      await Promise.all([loadMenu(), loadAggiunte(), loadRimozioni(), loadTastiRapidi()]);
+      renderCategories();
+      renderTastiRapidi();
+    }
+
+    async function loadMenu() {
+      try {
+        const res = await fetch('/menu');
+        menuData = await res.json();
+      } catch (e) {
+        console.error('Errore:', e);
+      }
+    }
+
+    async function loadAggiunte() {
+      try {
+        const res = await fetch('/api/aggiunte');
+        aggiunte = await res.json();
+      } catch (e) {
+        console.error('Errore:', e);
+      }
+    }
+
+    async function loadRimozioni() {
+      try {
+        const res = await fetch('/api/rimozioni');
+        rimozioni = await res.json();
+      } catch (e) {
+        console.error('Errore:', e);
+      }
+    }
+
+    async function loadTastiRapidi() {
+      try {
+        const res = await fetch('/api/tasti-rapidi');
+        tastiRapidi = await res.json();
+      } catch (e) {
+        console.error('Errore:', e);
+      }
+    }
+
+    function renderTastiRapidi() {
+      const container = document.getElementById('quick-access');
+      const grid = document.getElementById('quick-grid');
+      
+      if (!tastiRapidi || tastiRapidi.length === 0) {
+        container.classList.add('hidden');
+        return;
+      }
+      
+      container.classList.remove('hidden');
+      let html = '';
+      
+      tastiRapidi.forEach(tasto => {
+        html += `
+          <div class="quick-btn" onclick='aggiungiAlCarrelloRapido(${JSON.stringify(tasto)})'>
+            <div class="quick-icon">⚡</div>
+            <div class="quick-name">${tasto.nome}</div>
+            <div class="quick-price">€${tasto.prezzo.toFixed(2)}</div>
+          </div>`;
+      });
+      
+      grid.innerHTML = html;
+    }
+
+    function aggiungiAlCarrelloRapido(item) {
+      // Aggiungi al carrello usando i dati del tasto rapido
+      const articolo = {
+        id: item.articolo_id,
+        nome: item.nome,
+        gruppo: item.gruppo,
+        prezzo: item.prezzo
+      };
+      aggiungiAlCarrello(articolo);
+    }
+
+    function digitTavolo(num) {
+      inputTavolo += num;
+      tavoloSelezionato = inputTavolo;
+      updateTavoloDisplay();
+      updateDisplay();
+    }
+
+    function clearTavolo() {
+      inputTavolo = '';
+      tavoloSelezionato = '';
+      updateTavoloDisplay();
+      updateDisplay();
+    }
+
+    function selezionaTavoloRapido(numero) {
+      inputTavolo = numero;
+      tavoloSelezionato = numero;
+      updateTavoloDisplay();
+      updateDisplay();
+      // Chiudi automaticamente il tastierino dopo la selezione rapida
+      const section = document.getElementById('tavolo-section');
+      if (!section.classList.contains('tastierino-collapsed')) {
+        section.classList.add('tastierino-collapsed');
+      }
+    }
+
+    function updateTavoloDisplay() {
+      const display = document.getElementById('tavolo-display');
+      display.innerHTML = (tavoloSelezionato || '-') + '<span class="tavolo-toggle-icon">▼</span>';
+    }
+
+    function toggleTastierino() {
+      const section = document.getElementById('tavolo-section');
+      section.classList.toggle('tastierino-collapsed');
+    }
+
+    function renderCategories() {
+      const gruppi = [...new Set(menuData.map(item => item.gruppo))];
+      const list = document.getElementById('category-list');
+      let html = '';
+      gruppi.forEach(gruppo => {
+        html += `<div class="category-item" onclick="selectCategory('${gruppo}')">${gruppo}</div>`;
+      });
+      list.innerHTML = html;
+      if (!currentCategory && gruppi.length > 0) selectCategory(gruppi[0]);
+    }
+
+    function selectCategory(cat) {
+      currentCategory = cat;
+      document.querySelectorAll('.category-item').forEach(btn => {
+        btn.classList.toggle('active', btn.textContent === cat);
+      });
+      document.getElementById('items-title').textContent = `🍽️ ${cat}`;
+      renderItems();
+    }
+
+    function renderItems() {
+      const items = menuData.filter(item => item.gruppo === currentCategory);
+      const grid = document.getElementById('items-grid');
+      let html = '';
+      items.forEach(item => {
+        html += `
+          <div class="item-card" onclick='aggiungiAlCarrello(${JSON.stringify(item)})'>
+            <div class="item-name-tablet">${item.nome}</div>
+            <div class="item-price-tablet">€${item.prezzo.toFixed(2)}</div>
+          </div>`;
+      });
+      grid.innerHTML = html;
+    }
+
+    function aggiungiAlCarrello(item) {
+      if (!tavoloSelezionato) {
+        alert('⚠️ Seleziona un tavolo!');
+        return;
+      }
+      const existing = carrello.find(c => 
+        c.id === item.id && 
+        JSON.stringify(c.aggiunte || []) === '[]' &&
+        JSON.stringify(c.rimozioni || []) === '[]' && !c.note
+      );
+      if (existing) {
+        existing.qty++;
+      } else {
+        carrello.push({...item, qty: 1, aggiunte: [], rimozioni: [], note: ''});
+      }
+      updateDisplay();
+    }
+
+    function modificaQty(index, delta) {
+      carrello[index].qty += delta;
+      if (carrello[index].qty <= 0) carrello.splice(index, 1);
+      updateDisplay();
+    }
+
+    function rimuoviDalCarrello(index) {
+      carrello.splice(index, 1);
+      updateDisplay();
+    }
+
+    function apriNoteItem(index) {
+      itemInEdit = index;
+      const item = carrello[index];
+      let html = `
+        <div class="personalizza-section">
+          <h3>📝 Note per: ${item.nome}</h3>
+          <textarea class="note-input" id="note-input-simple" rows="4" placeholder="Scrivi qui le note...">${item.note || ''}</textarea>
+        </div>
+        <button class="btn-conferma" onclick="confermaNoteSemplice()">✅ Salva Note</button>`;
+      
+      document.getElementById('modal-item-name').textContent = item.nome;
+      document.getElementById('modal-body').innerHTML = html;
+      document.getElementById('modal-personalizza').classList.add('show');
+    }
+
+    function personalizzaItem(index) {
+      itemInEdit = index;
+      const item = carrello[index];
+      let html = `
+        <div class="personalizza-section">
+          <h3>➕ Aggiunte</h3>
+          <div class="aggiunte-grid" id="aggiunte-grid"></div>
+        </div>
+        <div class="personalizza-section">
+          <h3>➖ Rimozioni</h3>
+          <div class="rimozioni-grid" id="rimozioni-grid"></div>
+        </div>
+        <div class="personalizza-section">
+          <h3>📝 Note</h3>
+          <textarea class="note-input" id="note-input" rows="3">${item.note || ''}</textarea>
+        </div>
+        <button class="btn-conferma" onclick="confermaPersonalizzazione()">✅ Conferma</button>`;
+      
+      document.getElementById('modal-item-name').textContent = item.nome;
+      document.getElementById('modal-body').innerHTML = html;
+      
+      let aggHtml = '';
+      Object.keys(aggiunte).forEach(cat => {
+        aggiunte[cat].forEach(agg => {
+          const isSelected = item.aggiunte.some(a => a.id === agg.id);
+          aggHtml += `<div class="aggiunta-item ${isSelected ? 'selected' : ''}" 
+                       onclick="toggleAggiunta(${agg.id}, '${agg.nome}', ${agg.prezzo})">
+                       ${agg.nome}<br><strong>+€${agg.prezzo.toFixed(2)}</strong></div>`;
+        });
+      });
+      document.getElementById('aggiunte-grid').innerHTML = aggHtml;
+      
+      let rimHtml = '';
+      Object.keys(rimozioni).forEach(cat => {
+        rimozioni[cat].forEach(rim => {
+          const isSelected = item.rimozioni.some(r => r.id === rim.id);
+          rimHtml += `<div class="rimozione-item ${isSelected ? 'selected' : ''}" 
+                       onclick="toggleRimozione(${rim.id}, '${rim.nome}')">${rim.nome}</div>`;
+        });
+      });
+      document.getElementById('rimozioni-grid').innerHTML = rimHtml;
+      
+      document.getElementById('modal-personalizza').classList.add('show');
+    }
+
+    function toggleAggiunta(id, nome, prezzo) {
+      const item = carrello[itemInEdit];
+      const index = item.aggiunte.findIndex(a => a.id === id);
+      if (index >= 0) {
+        item.aggiunte.splice(index, 1);
+      } else {
+        item.aggiunte.push({ id, nome, prezzo });
+      }
+      personalizzaItem(itemInEdit);
+    }
+
+    function toggleRimozione(id, nome) {
+      const item = carrello[itemInEdit];
+      const index = item.rimozioni.findIndex(r => r.id === id);
+      if (index >= 0) {
+        item.rimozioni.splice(index, 1);
+      } else {
+        item.rimozioni.push({ id, nome });
+      }
+      personalizzaItem(itemInEdit);
+    }
+
+    function confermaPersonalizzazione() {
+      const note = document.getElementById('note-input').value.trim();
+      carrello[itemInEdit].note = note;
+      chiudiModal();
+      updateDisplay();
+    }
+
+    function confermaNoteSemplice() {
+      const note = document.getElementById('note-input-simple').value.trim();
+      carrello[itemInEdit].note = note;
+      chiudiModal();
+      updateDisplay();
+    }
+
+    function chiudiModal() {
+      document.getElementById('modal-personalizza').classList.remove('show');
+      itemInEdit = null;
+    }
+
+    function updateDisplay() {
+      const container = document.getElementById('carrello-list');
+      if (carrello.length === 0) {
+        container.innerHTML = '<div class="empty-cart-tablet">Seleziona tavolo e aggiungi articoli</div>';
+      } else {
+        let html = '';
+        carrello.forEach((item, index) => {
+          const prezzoBase = item.prezzo * item.qty;
+          const costoAggiunte = item.aggiunte.reduce((sum, a) => sum + (a.prezzo * item.qty), 0);
+          const totaleItem = prezzoBase + costoAggiunte;
+          
+          let noteHtml = '';
+          if (item.aggiunte.length > 0) {
+            noteHtml += `<div class="item-note-tablet">+ ${item.aggiunte.map(a => a.nome).join(', ')}</div>`;
+          }
+          if (item.rimozioni.length > 0) {
+            noteHtml += `<div class="item-note-tablet">− ${item.rimozioni.map(r => r.nome).join(', ')}</div>`;
+          }
+          if (item.note) {
+            noteHtml += `<div class="item-note-tablet">📝 ${item.note}</div>`;
+          }
+          
+          html += `
+            <div class="carrello-item-tablet">
+              <div class="carrello-item-header-tablet">
+                <div class="carrello-item-name-tablet">${item.nome}</div>
+                <div class="carrello-item-price-tablet">€${totaleItem.toFixed(2)}</div>
+              </div>
+              ${noteHtml}
+              <div class="carrello-controls-tablet">
+                <button class="qty-btn-tablet" onclick="modificaQty(${index}, -1)">−</button>
+                <div class="qty-display-tablet">${item.qty}</div>
+                <button class="qty-btn-tablet" onclick="modificaQty(${index}, 1)">+</button>
+                <button class="btn-action-tablet btn-note-tablet" onclick="apriNoteItem(${index})">📝</button>
+                <button class="btn-action-tablet btn-edit-tablet" onclick="personalizzaItem(${index})">🎨</button>
+                <button class="btn-action-tablet btn-delete-tablet" onclick="rimuoviDalCarrello(${index})">🗑️</button>
+              </div>
+            </div>`;
+        });
+        container.innerHTML = html;
+      }
+      
+      const totale = carrello.reduce((sum, item) => {
+        const prezzoBase = item.prezzo * item.qty;
+        const costoAggiunte = item.aggiunte.reduce((s, a) => s + (a.prezzo * item.qty), 0);
+        return sum + prezzoBase + costoAggiunte;
+      }, 0);
+      
+      document.getElementById('totale-display').textContent = `€${totale.toFixed(2)}`;
+      document.getElementById('btn-invia').disabled = !tavoloSelezionato || carrello.length === 0;
+    }
+
+    async function inviaOrdine() {
+      if (!tavoloSelezionato || carrello.length === 0) return;
+      
+      let testo = '';
+      carrello.forEach(item => {
+        const prezzoBase = item.prezzo * item.qty;
+        const costoAggiunte = item.aggiunte.reduce((sum, a) => sum + (a.prezzo * item.qty), 0);
+        const totaleItem = prezzoBase + costoAggiunte;
+        let riga = `${item.qty}× ${item.nome}`;
+        if (item.aggiunte.length > 0 || item.rimozioni.length > 0 || item.note) {
+          const details = [];
+          if (item.aggiunte.length > 0) details.push(`+ ${item.aggiunte.map(a => a.nome).join(', ')}`);
+          if (item.rimozioni.length > 0) details.push(`− ${item.rimozioni.map(r => r.nome).join(', ')}`);
+          if (item.note) details.push(item.note);
+          riga += ` (${details.join(' | ')})`;
+        }
+        riga += ` – €${totaleItem.toFixed(2)}`;
+        testo += riga + '\n';
+      });
+      
+      try {
+        const res = await fetch('/orders', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tavolo: tavoloSelezionato,
+            comanda: testo,
+            items: carrello.map(item => ({
+              id: item.id,
+              nome: item.nome,
+              gruppo: item.gruppo,
+              prezzo: item.prezzo,
+              qty: item.qty,
+              note: [
+                ...(item.aggiunte || []).map(a => `+ ${a.nome}`),
+                ...(item.rimozioni || []).map(r => `− ${r.nome}`),
+                item.note
+              ].filter(Boolean).join(' | ')
+            }))
+          })
+        });
+        
+        if (res.ok) {
+          alert('✅ Ordine inviato!');
+          carrello = [];
+          clearTavolo();
+          updateDisplay();
+        } else {
+          alert('❌ Errore invio');
+        }
+      } catch (e) {
+        alert('❌ Errore: ' + e.message);
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>

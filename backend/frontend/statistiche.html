@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Statistiche Articoli</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      margin: 0;
+      padding: 1rem;
+      background: #f5f5f5;
+    }
+    
+    .header {
+      background: #8e44ad;
+      color: white;
+      padding: 1rem;
+      margin: -1rem -1rem 1rem -1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .header h1 {
+      margin: 0;
+      font-size: 1.5rem;
+    }
+    
+    .nav-buttons {
+      display: flex;
+      gap: 0.5rem;
+    }
+    
+    .nav-buttons button {
+      background: #9b59b6;
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    
+    .nav-buttons button:hover {
+      background: #a569bd;
+    }
+    
+    .filters {
+      background: white;
+      padding: 1rem;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    
+    .filters input, .filters select {
+      padding: 0.5rem;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    
+    .filters button {
+      background: #8e44ad;
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    
+    .filters button:hover {
+      background: #7d3c98;
+    }
+    
+    .dashboard {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+    
+    .chart-container {
+      background: white;
+      padding: 1.5rem;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .chart-container h2 {
+      margin: 0 0 1rem 0;
+      color: #2c3e50;
+      font-size: 1.2rem;
+    }
+    
+    .top-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    
+    .top-list li {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.75rem;
+      border-bottom: 1px solid #ecf0f1;
+    }
+    
+    .top-list li:hover {
+      background: #f8f9fa;
+    }
+    
+    .item-info {
+      flex: 1;
+    }
+    
+    .item-name {
+      font-weight: 600;
+      color: #2c3e50;
+    }
+    
+    .item-group {
+      font-size: 0.85rem;
+      color: #7f8c8d;
+    }
+    
+    .item-stats {
+      text-align: right;
+    }
+    
+    .item-qty {
+      font-size: 1.2rem;
+      font-weight: bold;
+      color: #8e44ad;
+    }
+    
+    .item-revenue {
+      font-size: 0.9rem;
+      color: #27ae60;
+    }
+    
+    .rank {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      margin-right: 1rem;
+      color: white;
+    }
+    
+    .rank-1 { background: #ffd700; color: #333; }
+    .rank-2 { background: #c0c0c0; color: #333; }
+    .rank-3 { background: #cd7f32; }
+    .rank-other { background: #95a5a6; }
+    
+    .summary-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+    
+    .stat-box {
+      background: white;
+      padding: 1.5rem;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+    
+    .stat-box h3 {
+      margin: 0;
+      color: #7f8c8d;
+      font-size: 0.9rem;
+      text-transform: uppercase;
+    }
+    
+    .stat-box .value {
+      font-size: 2.5rem;
+      font-weight: bold;
+      color: #8e44ad;
+      margin: 0.5rem 0;
+    }
+    
+    .stat-box .label {
+      font-size: 0.85rem;
+      color: #95a5a6;
+    }
+    
+    .full-width {
+      grid-column: 1 / -1;
+    }
+    
+    .groups-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1rem;
+    }
+    
+    .group-card {
+      background: white;
+      padding: 1.5rem;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      transition: transform 0.2s;
+    }
+    
+    .group-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+    
+    .group-name {
+      font-weight: bold;
+      color: #2c3e50;
+      margin-bottom: 0.5rem;
+    }
+    
+    .group-stats {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 1rem;
+    }
+    
+    .group-qty {
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: #8e44ad;
+    }
+    
+    .group-revenue {
+      font-size: 1.2rem;
+      color: #27ae60;
+    }
+    
+    @media (max-width: 768px) {
+      .dashboard {
+        grid-template-columns: 1fr;
+      }
+      
+      .filters {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      
+      .filters input, .filters select, .filters button {
+        width: 100%;
+      }
+    }
+    
+    .loading {
+      text-align: center;
+      padding: 3rem;
+      color: #7f8c8d;
+    }
+    
+    .empty {
+      text-align: center;
+      padding: 3rem;
+      color: #95a5a6;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>📊 Statistiche Articoli</h1>
+    <div class="nav-buttons">
+      <button onclick="window.location='/'">🏠 Ordini</button>
+      <button onclick="window.location='/history.html'">📋 Ordini Attivi</button>
+      <button onclick="window.location='/storico.html'">🗂️ Storico</button>
+      <button onclick="window.location='/admin.html'">⚙️ Admin</button>
+    </div>
+  </div>
+
+  <div class="filters">
+    <div>
+      <label>Periodo:</label>
+      <select id="period-select">
+        <option value="today">Oggi</option>
+        <option value="yesterday">Ieri</option>
+        <option value="week" selected>Ultimi 7 giorni</option>
+        <option value="month">Ultimo mese</option>
+        <option value="custom">Personalizzato</option>
+      </select>
+    </div>
+    <div id="custom-dates" style="display: none;">
+      <input type="date" id="date-from" />
+      <span>-</span>
+      <input type="date" id="date-to" />
+    </div>
+    <button onclick="loadStatistiche()">🔄 Aggiorna</button>
+  </div>
+
+  <div class="summary-stats">
+    <div class="stat-box">
+      <h3>Articoli Diversi</h3>
+      <div class="value" id="stat-articoli">0</div>
+      <div class="label">tipologie vendute</div>
+    </div>
+    <div class="stat-box">
+      <h3>Pezzi Totali</h3>
+      <div class="value" id="stat-pezzi">0</div>
+      <div class="label">articoli venduti</div>
+    </div>
+    <div class="stat-box">
+      <h3>Ricavo Totale</h3>
+      <div class="value" id="stat-ricavo">€0</div>
+      <div class="label">nel periodo</div>
+    </div>
+  </div>
+
+  <div class="dashboard">
+    <div class="chart-container">
+      <h2>🏆 Top 10 Articoli più Venduti</h2>
+      <ul class="top-list" id="top-articoli">
+        <li class="loading">Caricamento...</li>
+      </ul>
+    </div>
+    
+    <div class="chart-container">
+      <h2>💰 Top 10 per Ricavo</h2>
+      <ul class="top-list" id="top-ricavo">
+        <li class="loading">Caricamento...</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="chart-container full-width">
+    <h2>📊 Statistiche per Gruppo</h2>
+    <div class="groups-grid" id="groups-stats">
+      <div class="loading">Caricamento...</div>
+    </div>
+  </div>
+
+  <script>
+    let authHeader = null;
+
+    // Gestione periodo
+    document.getElementById('period-select').addEventListener('change', function() {
+      const customDates = document.getElementById('custom-dates');
+      customDates.style.display = this.value === 'custom' ? 'flex' : 'none';
+    });
+
+    // Calcola date in base al periodo
+    function getDateRange() {
+      const period = document.getElementById('period-select').value;
+      const today = new Date();
+      today.setHours(23, 59, 59, 999);
+      
+      let from = new Date();
+      let to = today;
+      
+      switch(period) {
+        case 'today':
+          from = new Date(today);
+          from.setHours(0, 0, 0, 0);
+          break;
+        case 'yesterday':
+          from = new Date(today);
+          from.setDate(from.getDate() - 1);
+          from.setHours(0, 0, 0, 0);
+          to = new Date(from);
+          to.setHours(23, 59, 59, 999);
+          break;
+        case 'week':
+          from = new Date(today);
+          from.setDate(from.getDate() - 7);
+          from.setHours(0, 0, 0, 0);
+          break;
+        case 'month':
+          from = new Date(today);
+          from.setMonth(from.getMonth() - 1);
+          from.setHours(0, 0, 0, 0);
+          break;
+        case 'custom':
+          from = new Date(document.getElementById('date-from').value);
+          to = new Date(document.getElementById('date-to').value);
+          break;
+      }
+      
+      return {
+        from: from.toISOString(),
+        to: to.toISOString()
+      };
+    }
+
+    // Carica statistiche
+    async function loadStatistiche() {
+      const { from, to } = getDateRange();
+      
+      try {
+        // Carica statistiche articoli
+        const articoliResponse = await fetchWithAuth(`/api/statistiche/articoli?from=${from}&to=${to}`);
+        if (articoliResponse.ok) {
+          const articoliData = await articoliResponse.json();
+          displayArticoli(articoliData);
+        }
+        
+        // Carica statistiche gruppi
+        const gruppiResponse = await fetchWithAuth(`/api/statistiche/gruppi?from=${from}&to=${to}`);
+        if (gruppiResponse.ok) {
+          const gruppiData = await gruppiResponse.json();
+          displayGruppi(gruppiData);
+        }
+      } catch (error) {
+        console.error('Errore:', error);
+      }
+    }
+
+    // Fetch con autenticazione
+    async function fetchWithAuth(url) {
+      let response = await fetch(url, {
+        headers: authHeader ? { 'Authorization': authHeader } : {}
+      });
+      
+      if (response.status === 401) {
+        const password = prompt('Password amministratore:');
+        if (password) {
+          authHeader = 'Basic ' + btoa('admin:' + password);
+          response = await fetch(url, {
+            headers: { 'Authorization': authHeader }
+          });
+        }
+      }
+      
+      return response;
+    }
+
+    // Mostra statistiche articoli
+    function displayArticoli(data) {
+      const articoli = data.articoli;
+      
+      // Aggiorna statistiche sommario
+      const totArticoli = articoli.length;
+      const totPezzi = articoli.reduce((sum, a) => sum + a.quantita_totale, 0);
+      const totRicavo = articoli.reduce((sum, a) => sum + a.ricavo_totale, 0);
+      
+      document.getElementById('stat-articoli').textContent = totArticoli;
+      document.getElementById('stat-pezzi').textContent = totPezzi;
+      document.getElementById('stat-ricavo').textContent = `€${totRicavo.toFixed(2)}`;
+      
+      // Top 10 per quantità
+      const topQty = [...articoli].sort((a, b) => b.quantita_totale - a.quantita_totale).slice(0, 10);
+      displayTopList('top-articoli', topQty, 'quantita_totale');
+      
+      // Top 10 per ricavo
+      const topRevenue = [...articoli].sort((a, b) => b.ricavo_totale - a.ricavo_totale).slice(0, 10);
+      displayTopList('top-ricavo', topRevenue, 'ricavo_totale');
+    }
+
+    // Mostra lista top
+    function displayTopList(elementId, items, sortField) {
+      const element = document.getElementById(elementId);
+      
+      if (items.length === 0) {
+        element.innerHTML = '<li class="empty">Nessun dato disponibile</li>';
+        return;
+      }
+      
+      element.innerHTML = items.map((item, index) => {
+        const rankClass = index === 0 ? 'rank-1' : index === 1 ? 'rank-2' : index === 2 ? 'rank-3' : 'rank-other';
+        
+        return `
+          <li>
+            <div class="rank ${rankClass}">${index + 1}</div>
+            <div class="item-info">
+              <div class="item-name">${item.nome}</div>
+              <div class="item-group">${item.gruppo}</div>
+            </div>
+            <div class="item-stats">
+              <div class="item-qty">${item.quantita_totale} pz</div>
+              <div class="item-revenue">€${item.ricavo_totale.toFixed(2)}</div>
+            </div>
+          </li>
+        `;
+      }).join('');
+    }
+
+    // Mostra statistiche gruppi
+    function displayGruppi(data) {
+      const element = document.getElementById('groups-stats');
+      const gruppi = data.gruppi;
+      
+      if (gruppi.length === 0) {
+        element.innerHTML = '<div class="empty">Nessun dato disponibile</div>';
+        return;
+      }
+      
+      element.innerHTML = gruppi.map(gruppo => `
+        <div class="group-card">
+          <div class="group-name">${gruppo.gruppo}</div>
+          <div class="group-stats">
+            <div>
+              <div class="group-qty">${gruppo.quantita_totale}</div>
+              <div class="label">articoli venduti</div>
+            </div>
+            <div style="text-align: right;">
+              <div class="group-revenue">€${gruppo.ricavo_totale.toFixed(2)}</div>
+              <div class="label">ricavo totale</div>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // Inizializzazione
+    document.addEventListener('DOMContentLoaded', () => {
+      // Imposta date custom di default
+      const today = new Date();
+      const weekAgo = new Date(today);
+      weekAgo.setDate(weekAgo.getDate() - 7);
+      
+      document.getElementById('date-to').value = today.toISOString().split('T')[0];
+      document.getElementById('date-from').value = weekAgo.toISOString().split('T')[0];
+      
+      loadStatistiche();
+    });
+  </script>
+</body>
+</html>

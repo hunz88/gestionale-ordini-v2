@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin Menu - Sunset Bar</title>
+  <style>
+    body{font-family:sans-serif;margin:1rem;background:#f5f7fa}
+    h1{text-align:center;color:#007bff}
+    
+    .tabs {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 2rem;
+      border-bottom: 3px solid #007bff;
+    }
+    
+    .tab {
+      padding: 1rem 2rem;
+      background: #f8f9fa;
+      border: none;
+      cursor: pointer;
+      font-size: 1.1rem;
+      font-weight: bold;
+      border-radius: 0.5rem 0.5rem 0 0;
+      transition: all 0.3s;
+    }
+    
+    .tab:hover {
+      background: #e9ecef;
+    }
+    
+    .tab.active {
+      background: #007bff;
+      color: white;
+    }
+    
+    .tab-content {
+      display: none;
+      background: white;
+      padding: 1.5rem;
+      border-radius: 0 0.5rem 0.5rem 0.5rem;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    
+    .tab-content.active {
+      display: block;
+    }
+    
+    table{width:100%;border-collapse:collapse;margin-bottom:1rem}
+    th,td{border:1px solid #ddd;padding:.5rem;vertical-align:middle}
+    th{background:#007bff;color:white}
+    input, select{width:100%;box-sizing:border-box;padding:0.4rem;border:2px solid #e9ecef;border-radius:0.3rem}
+    input:focus,select:focus{border-color:#007bff;outline:none}
+    input[type=number]{width:5rem}
+    button{padding:.5rem .75rem;margin:.25rem 0;cursor:pointer;border:none;border-radius:0.4rem;font-weight:600;transition:all 0.3s}
+    button:hover{transform:translateY(-2px)}
+    
+    .stampa-bancone{background-color:#e3f2fd;color:#1976d2}
+    .stampa-cucina{background-color:#f3e5f5;color:#7b1fa2}
+    .stampa-entrambi{background-color:#fff3e0;color:#f57c00}
+    
+    .add-form {
+      display: grid;
+      gap: 0.5rem;
+      align-items: end;
+      margin-bottom: 2rem;
+      padding: 1rem;
+      background: #f8f9fa;
+      border-radius: 0.5rem;
+      border:2px dashed #007bff
+    }
+    
+    .add-form.menu {
+      grid-template-columns: 2fr 2fr 1fr 1.5fr auto;
+    }
+    
+    .add-form.aggiunte {
+      grid-template-columns: 2fr 1fr 1.5fr auto;
+    }
+    
+    .add-form.rimozioni {
+      grid-template-columns: 3fr 1.5fr auto;
+    }
+    
+    .nav-buttons {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    
+    .nav-buttons button {
+      padding: 0.7rem 1.2rem;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      font-weight: bold;
+      transition: all 0.3s;
+    }
+    
+    .nav-buttons button:hover {
+      background: #0056b3;
+    }
+    
+    .section-header {
+      background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+      color: white;
+      padding: 1rem;
+      border-radius: 0.5rem;
+      margin: 1rem 0;
+      font-size: 1.2rem;
+      font-weight: bold;
+    }
+    
+    .category-badge {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      background: #007bff;
+      color: white;
+      border-radius: 1rem;
+      font-size: 0.85rem;
+      font-weight: bold;
+    }
+    
+    .del-btn,.del-agg-btn,.del-rim-btn {
+      background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+      color: white;
+    }
+    
+    .add-menu-btn,.add-agg-btn,.add-rim-btn {
+      background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+      color: white;
+      font-size:1rem;
+    }
+    
+    .success-message {
+      background: #d4edda;
+      color: #155724;
+      padding: 1rem;
+      border-radius: 0.5rem;
+      margin-bottom: 1rem;
+      border: 1px solid #c3e6cb;
+      display: none;
+    }
+    
+    .success-message.show {
+      display: block;
+      animation: fadeIn 0.3s;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+  <h1>🌅 Admin – Gestione Menu & Aggiunte</h1>
+  
+  <div class="nav-buttons">
+    <button onclick="window.location='/'">← Torna Ordini</button>
+    <button onclick="window.location='/history.html'">📋 Ordini Attivi</button>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('menu')">🍽️ Menu Principale</button>
+    <button class="tab" onclick="switchTab('aggiunte')">➕ Aggiunte</button>
+    <button class="tab" onclick="switchTab('rimozioni')">➖ Rimozioni</button>
+  </div>
+
+  <!-- TAB MENU PRINCIPALE -->
+  <div id="tab-menu" class="tab-content active">
+    <div style="margin: 1rem 0; padding: 0.5rem; background: #f5f5f5; border-radius: 4px;">
+      <strong>Legenda Stampa:</strong>
+      <span class="stampa-bancone" style="padding: 2px 8px; margin: 0 5px; border-radius: 3px;">🥤 Bancone</span>
+      <span class="stampa-cucina" style="padding: 2px 8px; margin: 0 5px; border-radius: 3px;">👨‍🍳 Cucina</span>
+      <span class="stampa-entrambi" style="padding: 2px 8px; margin: 0 5px; border-radius: 3px;">📋 Entrambi</span>
+    </div>
+
+    <div id="menu-success" class="success-message"></div>
+
+    <table id="menu-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Gruppo</th>
+          <th>Nome</th>
+          <th>Prezzo</th>
+          <th>Destinazione Stampa</th>
+          <th>Azioni</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    
+    <h2>➕ Aggiungi Voce Menu</h2>
+    <div class="add-form menu">
+      <input id="new-gruppo" placeholder="Gruppo (es. BURGER)">
+      <input id="new-nome" placeholder="Nome (es. Hamburger Classico)">
+      <input id="new-prezzo" type="number" step="0.01" placeholder="Prezzo">
+      <select id="new-stampa">
+        <option value="bancone">🥤 Bancone</option>
+        <option value="cucina">👨‍🍳 Cucina</option>
+        <option value="entrambi">📋 Entrambi</option>
+      </select>
+      <button class="add-menu-btn" id="add-btn">➕ Aggiungi</button>
+    </div>
+  </div>
+
+  <!-- TAB AGGIUNTE -->
+  <div id="tab-aggiunte" class="tab-content">
+    <div class="section-header">➕ Gestione Aggiunte (Ingredienti Extra)</div>
+    
+    <div id="agg-success" class="success-message"></div>
+    
+    <table id="aggiunte-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Nome</th>
+          <th>Prezzo (€)</th>
+          <th>Categoria</th>
+          <th>Azioni</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    
+    <h2>➕ Aggiungi Nuova Aggiunta</h2>
+    <div class="add-form aggiunte">
+      <input id="new-agg-nome" placeholder="Nome (es. Formaggio Extra)">
+      <input id="new-agg-prezzo" type="number" step="0.01" placeholder="Prezzo">
+      <div style="display:flex;gap:0.5rem">
+        <select id="new-agg-categoria" style="flex:1">
+          <!-- Le categorie vengono caricate dinamicamente -->
+        </select>
+        <button onclick="addNewAggCategory()" style="background:#ffc107;color:#000;padding:0.4rem 0.8rem;border:none;border-radius:0.4rem;cursor:pointer;font-weight:bold" title="Aggiungi nuova categoria">➕ Cat</button>
+      </div>
+      <button class="add-agg-btn" id="add-agg-btn">➕ Aggiungi</button>
+    </div>
+  </div>
+
+  <!-- TAB RIMOZIONI -->
+  <div id="tab-rimozioni" class="tab-content">
+    <div class="section-header">➖ Gestione Rimozioni (Senza...)</div>
+    
+    <div id="rim-success" class="success-message"></div>
+    
+    <table id="rimozioni-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Nome</th>
+          <th>Categoria</th>
+          <th>Azioni</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    
+    <h2>➕ Aggiungi Nuova Rimozione</h2>
+    <div class="add-form rimozioni">
+      <input id="new-rim-nome" placeholder="Nome (es. Senza Lattosio)">
+      <div style="display:flex;gap:0.5rem">
+        <select id="new-rim-categoria" style="flex:1">
+          <!-- Le categorie vengono caricate dinamicamente -->
+        </select>
+        <button onclick="addNewRimCategory()" style="background:#ffc107;color:#000;padding:0.4rem 0.8rem;border:none;border-radius:0.4rem;cursor:pointer;font-weight:bold" title="Aggiungi nuova categoria">➕ Cat</button>
+      </div>
+      <button class="add-rim-btn" id="add-rim-btn">➕ Aggiungi</button>
+    </div>
+  </div>
+
+  <script>
+    let currentTab = 'menu';
+    let aggiunteCategorie = new Set(['Formaggi', 'Salumi', 'Verdure', 'Salse', 'Proteine', 'Contorni', 'Altro']);
+    let rimozioniCategorie = new Set(['Verdure', 'Formaggi', 'Salse', 'Salumi', 'Intolleranze', 'Altro']);
+
+    function showSuccess(tabId, message) {
+      const el = document.getElementById(`${tabId}-success`);
+      el.textContent = message;
+      el.classList.add('show');
+      setTimeout(() => el.classList.remove('show'), 3000);
+    }
+
+    function addNewAggCategory() {
+      const newCat = prompt('📂 Inserisci il nome della nuova categoria per le Aggiunte:\n(es. "Condimenti", "Extra", "Bevande")');
+      if (newCat && newCat.trim()) {
+        const catName = newCat.trim();
+        aggiunteCategorie.add(catName);
+        updateAggCategorySelects();
+        showSuccess('agg', `✅ Categoria "${catName}" aggiunta!`);
+      }
+    }
+
+    function addNewRimCategory() {
+      const newCat = prompt('📂 Inserisci il nome della nuova categoria per le Rimozioni:\n(es. "Allergie", "Diete Speciali")');
+      if (newCat && newCat.trim()) {
+        const catName = newCat.trim();
+        rimozioniCategorie.add(catName);
+        updateRimCategorySelects();
+        showSuccess('rim', `✅ Categoria "${catName}" aggiunta!`);
+      }
+    }
+
+    function updateAggCategorySelects() {
+      const selects = document.querySelectorAll('#new-agg-categoria, #aggiunte-table select[data-field="categoria"]');
+      const sortedCats = Array.from(aggiunteCategorie).sort();
+      
+      selects.forEach(select => {
+        const currentValue = select.value;
+        select.innerHTML = '';
+        sortedCats.forEach(cat => {
+          const option = document.createElement('option');
+          option.value = cat;
+          option.textContent = cat;
+          if (cat === currentValue) option.selected = true;
+          select.appendChild(option);
+        });
+      });
+    }
+
+    function updateRimCategorySelects() {
+      const selects = document.querySelectorAll('#new-rim-categoria, #rimozioni-table select[data-field="categoria"]');
+      const sortedCats = Array.from(rimozioniCategorie).sort();
+      
+      selects.forEach(select => {
+        const currentValue = select.value;
+        select.innerHTML = '';
+        sortedCats.forEach(cat => {
+          const option = document.createElement('option');
+          option.value = cat;
+          option.textContent = cat;
+          if (cat === currentValue) option.selected = true;
+          select.appendChild(option);
+        });
+      });
+    }
+
+    function switchTab(tab) {
+      currentTab = tab;
+      
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      
+      document.querySelector(`[onclick="switchTab('${tab}')"]`).classList.add('active');
+      document.getElementById(`tab-${tab}`).classList.add('active');
+      
+      if (tab === 'menu') {
+        loadMenu();
+      } else if (tab === 'aggiunte') {
+        loadAggiunte();
+      } else if (tab === 'rimozioni') {
+        loadRimozioni();
+      }
+    }
+
+    function getStampaClass(destinazione) {
+      switch(destinazione) {
+        case 'bancone': return 'stampa-bancone';
+        case 'cucina': return 'stampa-cucina';
+        case 'entrambi': return 'stampa-entrambi';
+        default: return '';
+      }
+    }
+
+    // ========== GESTIONE MENU ==========
+    async function loadMenu(){
+      const res = await fetch('/menu');
+      const items = await res.json();
+      const tbody = document.querySelector('#menu-table tbody');
+      tbody.innerHTML = '';
+      
+      items.forEach(v=>{
+        const destinazione = v.destinazione_stampa || 'cucina';
+        
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${v.id}</td>
+          <td><input data-id="${v.id}" data-field="gruppo" value="${v.gruppo}"></td>
+          <td><input data-id="${v.id}" data-field="nome" value="${v.nome}"></td>
+          <td><input type="number" step="0.01" data-id="${v.id}" data-field="prezzo" value="${v.prezzo}"></td>
+          <td>
+            <select data-id="${v.id}" data-field="destinazione_stampa" class="${getStampaClass(destinazione)}">
+              <option value="bancone" ${destinazione==='bancone'?'selected':''}>🥤 Bancone</option>
+              <option value="cucina" ${destinazione==='cucina'?'selected':''}>👨‍🍳 Cucina</option>
+              <option value="entrambi" ${destinazione==='entrambi'?'selected':''}>📋 Entrambi</option>
+            </select>
+          </td>
+          <td><button data-id="${v.id}" class="del-btn">🗑️ Elimina</button></td>`;
+        tbody.appendChild(tr);
+      });
+    }
+
+    document.querySelector('#menu-table').addEventListener('change', async e=>{
+      const id = e.target.dataset.id;
+      const field = e.target.dataset.field;
+      let val = e.target.value;
+      
+      if(field==='prezzo') val = parseFloat(val);
+      
+      if(field === 'destinazione_stampa') {
+        e.target.className = getStampaClass(val);
+      }
+      
+      await fetch(`/menu/${id}`,{
+        method:'PUT',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({[field]:val})
+      });
+      
+      showSuccess('menu', '✅ Modificato!');
+    });
+
+    document.querySelector('#menu-table').addEventListener('click', async e=>{
+      if(e.target.classList.contains('del-btn')){
+        const id = e.target.dataset.id;
+        if(confirm('❌ Eliminare questa voce dal menu?')) {
+          await fetch(`/menu/${id}`,{method:'DELETE'});
+          showSuccess('menu', '✅ Voce eliminata!');
+          loadMenu();
+        }
+      }
+    });
+
+    document.getElementById('add-btn').onclick = async ()=>{
+      const g = document.getElementById('new-gruppo').value.trim();
+      const n = document.getElementById('new-nome').value.trim();
+      const p = parseFloat(document.getElementById('new-prezzo').value);
+      const s = document.getElementById('new-stampa').value;
+      
+      if(!g||!n||isNaN(p)){ 
+        alert('⚠️ Compila tutti i campi!'); 
+        return; 
+      }
+      
+      await fetch('/menu',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+          gruppo: g,
+          nome: n,
+          prezzo: p,
+          destinazione_stampa: s
+        })
+      });
+      
+      document.getElementById('new-gruppo').value='';
+      document.getElementById('new-nome').value='';
+      document.getElementById('new-prezzo').value='';
+      document.getElementById('new-stampa').value='cucina';
+      
+      showSuccess('menu', `✅ "${n}" aggiunto al menu!`);
+      loadMenu();
+    };
+
+    // ========== GESTIONE AGGIUNTE ==========
+    async function loadAggiunte() {
+      const res = await fetch('/api/aggiunte');
+      const aggiunte = await res.json();
+      const tbody = document.querySelector('#aggiunte-table tbody');
+      tbody.innerHTML = '';
+      
+      // Raccogli tutte le categorie dal database
+      Object.keys(aggiunte).forEach(cat => aggiunteCategorie.add(cat));
+      
+      // Ordina per categoria
+      const categorie = Object.keys(aggiunte).sort();
+      
+      categorie.forEach(categoria => {
+        aggiunte[categoria].forEach(agg => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${agg.id}</td>
+            <td><input data-id="${agg.id}" data-field="nome" value="${agg.nome}" style="min-width:200px"></td>
+            <td><input type="number" step="0.01" data-id="${agg.id}" data-field="prezzo" value="${agg.prezzo}" style="width:80px"></td>
+            <td>
+              <select data-id="${agg.id}" data-field="categoria">
+                ${Array.from(aggiunteCategorie).sort().map(cat => 
+                  `<option value="${cat}" ${cat===categoria?'selected':''}>${cat}</option>`
+                ).join('')}
+              </select>
+            </td>
+            <td><button data-id="${agg.id}" class="del-agg-btn">🗑️ Elimina</button></td>
+          `;
+          tbody.appendChild(tr);
+        });
+      });
+      
+      // Aggiorna il select del form di aggiunta
+      updateAggCategorySelects();
+    }
+
+    document.querySelector('#aggiunte-table').addEventListener('change', async e=>{
+      const id = e.target.dataset.id;
+      const field = e.target.dataset.field;
+      let val = e.target.value;
+      
+      if(field==='prezzo') val = parseFloat(val);
+      
+      const response = await fetch(`/api/aggiunte/${id}`,{
+        method:'PUT',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({[field]:val})
+      });
+      
+      if(response.ok) {
+        showSuccess('agg', '✅ Aggiunta modificata!');
+        if(field === 'categoria') {
+          // Ricarica per mostrare nella nuova categoria
+          setTimeout(() => loadAggiunte(), 500);
+        }
+      }
+    });
+
+    document.querySelector('#aggiunte-table').addEventListener('click', async e=>{
+      if(e.target.classList.contains('del-agg-btn')){
+        const id = e.target.dataset.id;
+        if(confirm('❌ Eliminare questa aggiunta?')) {
+          await fetch(`/api/aggiunte/${id}`,{method:'DELETE'});
+          showSuccess('agg', '✅ Aggiunta eliminata!');
+          loadAggiunte();
+        }
+      }
+    });
+
+    document.getElementById('add-agg-btn').onclick = async ()=>{
+      const n = document.getElementById('new-agg-nome').value.trim();
+      const p = parseFloat(document.getElementById('new-agg-prezzo').value);
+      const c = document.getElementById('new-agg-categoria').value;
+      
+      if(!n||isNaN(p)){ 
+        alert('⚠️ Compila nome e prezzo!'); 
+        return; 
+      }
+      
+      const response = await fetch('/api/aggiunte',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+          nome: n,
+          prezzo: p,
+          categoria: c
+        })
+      });
+      
+      if(response.ok) {
+        document.getElementById('new-agg-nome').value='';
+        document.getElementById('new-agg-prezzo').value='';
+        
+        showSuccess('agg', `✅ "${n}" aggiunto alle aggiunte!`);
+        loadAggiunte();
+      } else {
+        alert('❌ Errore durante il salvataggio');
+      }
+    };
+
+    // ========== GESTIONE RIMOZIONI ==========
+    async function loadRimozioni() {
+      const res = await fetch('/api/rimozioni');
+      const rimozioni = await res.json();
+      const tbody = document.querySelector('#rimozioni-table tbody');
+      tbody.innerHTML = '';
+      
+      // Raccogli tutte le categorie dal database
+      Object.keys(rimozioni).forEach(cat => rimozioniCategorie.add(cat));
+      
+      // Ordina per categoria
+      const categorie = Object.keys(rimozioni).sort();
+      
+      categorie.forEach(categoria => {
+        rimozioni[categoria].forEach(rim => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${rim.id}</td>
+            <td><input data-id="${rim.id}" data-field="nome" value="${rim.nome}" style="min-width:200px"></td>
+            <td>
+              <select data-id="${rim.id}" data-field="categoria">
+                ${Array.from(rimozioniCategorie).sort().map(cat => 
+                  `<option value="${cat}" ${cat===categoria?'selected':''}>${cat}</option>`
+                ).join('')}
+              </select>
+            </td>
+            <td><button data-id="${rim.id}" class="del-rim-btn">🗑️ Elimina</button></td>
+          `;
+          tbody.appendChild(tr);
+        });
+      });
+      
+      // Aggiorna il select del form di aggiunta
+      updateRimCategorySelects();
+    }
+
+    document.querySelector('#rimozioni-table').addEventListener('change', async e=>{
+      const id = e.target.dataset.id;
+      const field = e.target.dataset.field;
+      const val = e.target.value;
+      
+      const response = await fetch(`/api/rimozioni/${id}`,{
+        method:'PUT',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({[field]:val})
+      });
+      
+      if(response.ok) {
+        showSuccess('rim', '✅ Rimozione modificata!');
+        if(field === 'categoria') {
+          // Ricarica per mostrare nella nuova categoria
+          setTimeout(() => loadRimozioni(), 500);
+        }
+      }
+    });
+
+    document.querySelector('#rimozioni-table').addEventListener('click', async e=>{
+      if(e.target.classList.contains('del-rim-btn')){
+        const id = e.target.dataset.id;
+        if(confirm('❌ Eliminare questa rimozione?')) {
+          await fetch(`/api/rimozioni/${id}`,{method:'DELETE'});
+          showSuccess('rim', '✅ Rimozione eliminata!');
+          loadRimozioni();
+        }
+      }
+    });
+
+    document.getElementById('add-rim-btn').onclick = async ()=>{
+      const n = document.getElementById('new-rim-nome').value.trim();
+      const c = document.getElementById('new-rim-categoria').value;
+      
+      if(!n){ 
+        alert('⚠️ Inserisci un nome!'); 
+        return; 
+      }
+      
+      const response = await fetch('/api/rimozioni',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+          nome: n,
+          categoria: c
+        })
+      });
+      
+      if(response.ok) {
+        document.getElementById('new-rim-nome').value='';
+        
+        showSuccess('rim', `✅ "${n}" aggiunto alle rimozioni!`);
+        loadRimozioni();
+      } else {
+        alert('❌ Errore durante il salvataggio');
+      }
+    };
+
+    // Carica menu all'avvio
+    loadMenu();
+  </script>
+</body>
+</html>

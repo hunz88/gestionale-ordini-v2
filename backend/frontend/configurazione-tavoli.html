@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Configurazione Tavoli - Sunset Bar</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+      min-height: 100vh;
+      padding: 2rem;
+    }
+    .header {
+      background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+      color: white;
+      padding: 2rem;
+      text-align: center;
+      border-radius: 1rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+    .header h1 { font-size: 2rem; margin-bottom: 0.5rem; }
+    .nav-buttons {
+      margin-top: 1rem;
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+    }
+    .nav-buttons button {
+      padding: 0.7rem 1.5rem;
+      border: none;
+      border-radius: 0.5rem;
+      background: rgba(255,255,255,0.2);
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .container { max-width: 1200px; margin: 0 auto; }
+    .info-box {
+      background: #e3f2fd;
+      border-left: 4px solid #007bff;
+      padding: 1.5rem;
+      border-radius: 0.5rem;
+      margin-bottom: 2rem;
+    }
+    .sala-card {
+      background: white;
+      border-radius: 1rem;
+      padding: 2rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .sala-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+      padding-bottom: 1rem;
+      border-bottom: 2px solid #e9ecef;
+    }
+    .sala-title {
+      font-size: 1.5rem;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .form-group { margin-bottom: 1.5rem; }
+    .form-group label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 600;
+      color: #2c3e50;
+    }
+    .form-group input {
+      width: 100%;
+      padding: 0.8rem;
+      border: 2px solid #e9ecef;
+      border-radius: 0.5rem;
+      font-size: 1rem;
+    }
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+    .btn-save {
+      background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+      color: white;
+      border: none;
+      padding: 1rem 2rem;
+      border-radius: 0.5rem;
+      font-weight: bold;
+      font-size: 1.1rem;
+      cursor: pointer;
+      width: 100%;
+    }
+    .toast {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      background: #28a745;
+      color: white;
+      padding: 1rem 2rem;
+      border-radius: 0.5rem;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      z-index: 1000;
+    }
+    .toast.error { background: #dc3545; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>⚙️ Configurazione Tavoli</h1>
+    <p>Gestisci il numero di tavoli per ogni sala</p>
+    <div class="nav-buttons">
+      <button onclick="location.href='/'">🏠 Home</button>
+      <button onclick="location.href='/history.html'">📋 Ordini</button>
+    </div>
+  </div>
+  <div class="container">
+    <div class="info-box">
+      <h3>💡 Come funziona</h3>
+      <p>
+        • Puoi modificare il numero di tavoli per ogni sala<br>
+        • I tavoli verranno numerati automaticamente<br>
+        • Le modifiche saranno immediatamente visibili<br>
+        • Non puoi modificare il numero iniziale (per evitare conflitti)
+      </p>
+    </div>
+    <div id="sale-container"></div>
+  </div>
+  <script>
+    let sale = [];
+    async function loadSale() {
+      try {
+        const res = await fetch('/api/configurazione-sale');
+        sale = await res.json();
+        renderSale();
+      } catch (error) {
+        console.error('Errore:', error);
+        showToast('Errore caricamento', true);
+      }
+    }
+    function renderSale() {
+      const container = document.getElementById('sale-container');
+      let html = '';
+      sale.forEach(sala => {
+        const tavoloFine = sala.numero_inizio + sala.numero_tavoli - 1;
+        html += `
+          <div class="sala-card">
+            <div class="sala-header">
+              <div class="sala-title">
+                <span style="font-size: 2rem;">${sala.icona}</span>
+                <span>${sala.nome_sala}</span>
+              </div>
+              <div style="color: #6c757d;">Tavoli: ${sala.numero_inizio}-${tavoloFine}</div>
+            </div>
+            <form onsubmit="salvaSala(event, '${sala.codice_sala}')">
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Nome Sala</label>
+                  <input type="text" id="nome-${sala.codice_sala}" 
+                         value="${sala.nome_sala}" required>
+                </div>
+                <div class="form-group">
+                  <label>Numero Tavoli</label>
+                  <input type="number" id="tavoli-${sala.codice_sala}" 
+                         value="${sala.numero_tavoli}" min="1" max="50" required>
+                </div>
+              </div>
+              <div class="form-group">
+                <label>Informazioni</label>
+                <div style="padding: 1rem; background: #f8f9fa; border-radius: 0.5rem;">
+                  <strong>Numero iniziale:</strong> ${sala.numero_inizio}<br>
+                  <strong>Codice sala:</strong> ${sala.codice_sala}<br>
+                  <strong>Colore:</strong> <span style="display: inline-block; width: 30px; height: 30px; background: ${sala.colore}; border-radius: 0.3rem;"></span>
+                </div>
+              </div>
+              <button type="submit" class="btn-save">💾 Salva Modifiche</button>
+            </form>
+          </div>
+        `;
+      });
+      container.innerHTML = html;
+    }
+    async function salvaSala(event, codiceSala) {
+      event.preventDefault();
+      const nome = document.getElementById(`nome-${codiceSala}`).value;
+      const numeroTavoli = parseInt(document.getElementById(`tavoli-${codiceSala}`).value);
+      try {
+        const res = await fetch('/api/configurazione-sale', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            codice_sala: codiceSala,
+            nome_sala: nome,
+            numero_tavoli: numeroTavoli
+          })
+        });
+        if (res.ok) {
+          showToast('✅ Salvato!');
+          loadSale();
+        } else {
+          showToast('❌ Errore', true);
+        }
+      } catch (error) {
+        showToast('❌ ' + error.message, true);
+      }
+    }
+    function showToast(message, isError = false) {
+      const toast = document.createElement('div');
+      toast.className = `toast ${isError ? 'error' : ''}`;
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      setTimeout(() => toast.remove(), 3000);
+    }
+    loadSale();
+  </script>
+</body>
+</html>

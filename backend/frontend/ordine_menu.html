@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Riordina Menu - Sunset Bar</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #f0f0f0; padding: 20px; }
+        .container { max-width: 1000px; margin: 0 auto; background: white; border-radius: 10px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { color: #2c3e50; margin-bottom: 20px; text-align: center; }
+        
+        .categoria { background: #ecf0f1; margin: 15px 0; border-radius: 8px; overflow: hidden; }
+        .categoria-header { 
+            background: #3498db; color: white; padding: 15px; font-weight: bold; 
+            display: flex; justify-content: space-between; align-items: center; 
+        }
+        .categoria-controls { display: flex; gap: 5px; }
+        .btn-move { background: #2980b9; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; font-size: 12px; }
+        .btn-move:hover { background: #1f5f8b; }
+        .btn-move:disabled { background: #bdc3c7; cursor: not-allowed; }
+        
+        .articoli-list { padding: 10px; }
+        .articolo { 
+            background: white; margin: 5px 0; padding: 10px; border-radius: 5px; 
+            border-left: 4px solid #3498db; display: flex; justify-content: space-between; align-items: center;
+        }
+        .articolo-info { flex: 1; }
+        .articolo-controls { display: flex; gap: 5px; }
+        .btn-arrow { background: #27ae60; color: white; border: none; padding: 5px 8px; border-radius: 3px; cursor: pointer; font-size: 14px; }
+        .btn-arrow:hover { background: #1e8449; }
+        .btn-arrow:disabled { background: #bdc3c7; cursor: not-allowed; }
+        
+        .buttons { margin-top: 20px; text-align: center; }
+        .btn { padding: 12px 24px; margin: 0 10px; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; }
+        .btn-primary { background: #3498db; color: white; }
+        .btn-success { background: #27ae60; color: white; }
+        .btn-secondary { background: #95a5a6; color: white; }
+        .btn-warning { background: #f39c12; color: white; }
+        .btn:hover { opacity: 0.9; }
+        
+        .status { margin: 20px 0; padding: 15px; border-radius: 5px; text-align: center; display: none; }
+        .status.success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .status.error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .status.info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        .loading { display: none; text-align: center; margin: 20px 0; }
+        
+        .debug { margin: 20px 0; padding: 10px; background: #f8f9fa; border-radius: 5px; font-family: monospace; font-size: 12px; max-height: 200px; overflow-y: auto; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌅 Riordina Menu - Sunset Bar</h1>
+        
+        <div class="status" id="status"></div>
+        <div class="loading" id="loading">⏳ Caricamento...</div>
+        
+        <div id="menu-container"></div>
+        
+        <div class="buttons">
+            <button class="btn btn-success" onclick="salvaOrdine()">💾 Salva Nuovo Ordine</button>
+            <button class="btn btn-warning" onclick="testEndpoint()">🧪 Test Connessione</button>
+            <button class="btn btn-secondary" onclick="location.reload()">🔄 Ricarica</button>
+            <button class="btn btn-secondary" onclick="location.href='/admin.html'">← Torna Admin</button>
+        </div>
+        
+        <div id="debug" class="debug" style="display: none;"></div>
+    </div>
+
+    <script>
+        let menuData = {};
+        let categorieOrdine = [];
+
+        // Carica menu all'avvio
+        document.addEventListener('DOMContentLoaded', caricaMenu);
+
+        function log(message) {
+            console.log(message);
+            const debugDiv = document.getElementById('debug');
+            debugDiv.style.display = 'block';
+            debugDiv.innerHTML += new Date().toLocaleTimeString() + ': ' + message + '<br>';
+            debugDiv.scrollTop = debugDiv.scrollHeight;
+        }
+
+        async function caricaMenu() {
+            document.getElementById('loading').style.display = 'block';
+            try {
+                log('Caricamento menu...');
+                const response = await fetch('/menu');
+                const data = await response.json();
+                log(`Menu caricato: ${data.length} articoli`);
+                
+                // Raggruppa per categoria
+                menuData = {};
+                data.forEach(item => {
+                    if (!menuData[item.categoria]) {
+                        menuData[item.categoria] = [];
+                    }
+                    menuData[item.categoria].push(item);
+                });
+                
+                // Ordine iniziale categorie
+                categorieOrdine = Object.keys(menuData).sort();
+                log(`Categorie trovate: ${categorieOrdine.join(', ')}`);
+                renderMenu();
+            } catch (error) {
+                log('ERRORE caricamento menu: ' + error.message);
+                mostraStatus('Errore nel caricamento del menu', 'error');
+            }
+            document.getElementById('loading').style.display = 'none';
+        }
+
+        function renderMenu() {
+            const container = document.getElementById('menu-container');
+            container.innerHTML = '';
+            
+            categorieOrdine.forEach((categoria, catIndex) => {
+                const categoriaDiv = document.createElement('div');
+                categoriaDiv.className = 'categoria';
+                
+                categoriaDiv.innerHTML = `
+                    <div class="categoria-header">
+                        <span>🍽️ ${categoria} (${menuData[categoria].length} articoli)</span>
+                        <div class="categoria-controls">
+                            <button class="btn-move" onclick="muoviCategoria(${catIndex}, -1)" ${catIndex === 0 ? 'disabled' : ''}>⬆️</button>
+                            <button class="btn-move" onclick="muoviCategoria(${catIndex}, 1)" ${catIndex === categorieOrdine.length - 1 ? 'disabled' : ''}>⬇️</button>
+                        </div>
+                    </div>
+                    <div class="articoli-list" id="articoli-${catIndex}"></div>
+                `;
+                
+                container.appendChild(categoriaDiv);
+                
+                // Aggiungi articoli
+                const articoliDiv = categoriaDiv.querySelector('.articoli-list');
+                menuData[categoria].forEach((articolo, artIndex) => {
+                    const articoloDiv = document.createElement('div');
+                    articoloDiv.className = 'articolo';
+                    
+                    articoloDiv.innerHTML = `
+                        <div class="articolo-info">
+                            <strong>${articolo.nome}</strong> - €${articolo.prezzo.toFixed(2)}
+                        </div>
+                        <div class="articolo-controls">
+                            <button class="btn-arrow" onclick="muoviArticolo('${categoria}', ${artIndex}, -1)" ${artIndex === 0 ? 'disabled' : ''}>⬆️</button>
+                            <button class="btn-arrow" onclick="muoviArticolo('${categoria}', ${artIndex}, 1)" ${artIndex === menuData[categoria].length - 1 ? 'disabled' : ''}>⬇️</button>
+                        </div>
+                    `;
+                    
+                    articoliDiv.appendChild(articoloDiv);
+                });
+            });
+        }
+
+        function muoviCategoria(index, direzione) {
+            if (index + direzione < 0 || index + direzione >= categorieOrdine.length) return;
+            
+            // Scambia posizioni
+            const temp = categorieOrdine[index];
+            categorieOrdine[index] = categorieOrdine[index + direzione];
+            categorieOrdine[index + direzione] = temp;
+            
+            renderMenu();
+            mostraStatus('Categoria spostata', 'success');
+            log(`Categoria "${temp}" spostata`);
+        }
+
+        function muoviArticolo(categoria, index, direzione) {
+            const articoli = menuData[categoria];
+            if (index + direzione < 0 || index + direzione >= articoli.length) return;
+            
+            // Scambia posizioni
+            const temp = articoli[index];
+            articoli[index] = articoli[index + direzione];
+            articoli[index + direzione] = temp;
+            
+            renderMenu();
+            mostraStatus('Articolo spostato', 'success');
+            log(`Articolo "${temp.nome}" spostato`);
+        }
+
+        async function testEndpoint() {
+            log('=== TEST ENDPOINT ===');
+            try {
+                const testData = { updates: [{ id: 1, ordine_categoria: 1, ordine_articolo: 1 }] };
+                log('Invio dati test: ' + JSON.stringify(testData));
+                
+                const response = await fetch('/api/menu/salva-ordine', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify(testData)
+                });
+                
+                log('Status risposta: ' + response.status);
+                log('Content-Type: ' + (response.headers.get('content-type') || 'N/A'));
+                
+                const responseText = await response.text();
+                log('Risposta raw: ' + responseText.substring(0, 200) + (responseText.length > 200 ? '...' : ''));
+                
+                if (response.status === 401) {
+                    mostraStatus('❌ Errore autenticazione - Ricarica pagina', 'error');
+                    return;
+                }
+                
+                try {
+                    const result = JSON.parse(responseText);
+                    log('JSON parseato: ' + JSON.stringify(result));
+                    mostraStatus('✅ Test endpoint riuscito!', 'success');
+                } catch (e) {
+                    log('ERRORE parsing JSON: ' + e.message);
+                    mostraStatus('❌ Risposta server non valida', 'error');
+                }
+                
+            } catch (error) {
+                log('ERRORE test: ' + error.message);
+                mostraStatus('❌ Errore connessione: ' + error.message, 'error');
+            }
+        }
+
+        async function salvaOrdine() {
+            if (!confirm('Salvare il nuovo ordine del menu?')) return;
+            
+            document.getElementById('loading').style.display = 'block';
+            log('=== SALVATAGGIO ORDINE ===');
+            
+            try {
+                const updates = [];
+                
+                categorieOrdine.forEach((categoria, catIndex) => {
+                    menuData[categoria].forEach((articolo, artIndex) => {
+                        updates.push({
+                            id: articolo.id,
+                            ordine_categoria: catIndex + 1,
+                            ordine_articolo: artIndex + 1
+                        });
+                    });
+                });
+                
+                log(`Preparati ${updates.length} aggiornamenti`);
+                log('Primi 3 updates: ' + JSON.stringify(updates.slice(0, 3)));
+                
+                const response = await fetch('/api/menu/salva-ordine', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({ updates })
+                });
+                
+                log('Status risposta: ' + response.status);
+                log('Content-Type: ' + (response.headers.get('content-type') || 'N/A'));
+                
+                const responseText = await response.text();
+                log('Risposta (primi 200 char): ' + responseText.substring(0, 200));
+                
+                if (response.status === 401) {
+                    mostraStatus('❌ Errore autenticazione. Ricarica la pagina e rilogga.', 'error');
+                    return;
+                }
+                
+                let result;
+                try {
+                    result = JSON.parse(responseText);
+                    log('JSON parseato: ' + JSON.stringify(result));
+                } catch (e) {
+                    log('ERRORE parsing JSON: ' + e.message);
+                    throw new Error('Risposta del server non valida: ' + responseText.substring(0, 100));
+                }
+                
+                if (response.ok && result.success) {
+                    log('SUCCESSO: ' + result.message);
+                    mostraStatus(`✅ ${result.message}`, 'success');
+                } else {
+                    throw new Error(result.error || 'Errore sconosciuto');
+                }
+                
+            } catch (error) {
+                log('ERRORE salvataggio: ' + error.message);
+                mostraStatus('❌ Errore nel salvataggio: ' + error.message, 'error');
+            }
+            
+            document.getElementById('loading').style.display = 'none';
+        }
+
+        function mostraStatus(messaggio, tipo) {
+            const status = document.getElementById('status');
+            status.textContent = messaggio;
+            status.className = `status ${tipo}`;
+            status.style.display = 'block';
+            
+            setTimeout(() => {
+                status.style.display = 'none';
+            }, 5000);
+        }
+    </script>
+</body>
+</html>

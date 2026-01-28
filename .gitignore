@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.pyc
+venv/
+.venv/
+
+# Database e Backup (dati sensibili/pesanti)
+*.db
+*.backup
+backups/
+file backup funzionante/
+
+# Log
+logs/
+*.log
+
+# Cartelle di sistema
+.DS_Store
+Thumbs.db

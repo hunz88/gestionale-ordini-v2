@@ -661,6 +661,49 @@
       color: #6c757d;
     }
 
+    /* ========== STILI NUOVA LAYOUT 2 COLONNE ========== */
+    .split-item-card {
+      background: white;
+      border: 2px solid #e2e8f0;
+      border-radius: 0.6rem;
+      padding: 0.9rem;
+      margin-bottom: 0.6rem;
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    .split-item-card:hover {
+      border-color: #667eea;
+      background: #f7fafc;
+      transform: translateX(4px);
+      box-shadow: 0 3px 8px rgba(102,126,234,0.15);
+    }
+
+    .split-item-card:active {
+      transform: translateX(2px) scale(0.98);
+    }
+
+    .split-selected-card {
+      background: #f0fff4;
+      border: 2px solid #9ae6b4;
+      border-radius: 0.6rem;
+      padding: 0.9rem;
+      margin-bottom: 0.6rem;
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      box-shadow: 0 2px 6px rgba(72,187,120,0.1);
+      transition: all 0.25s ease;
+    }
+
+    .split-selected-card:hover {
+      box-shadow: 0 4px 12px rgba(72,187,120,0.2);
+    }
+
     @media (max-width: 768px) {
       .orders-grid {
         grid-template-columns: 1fr;
@@ -761,42 +804,84 @@
     </div>
   </div>
 
-  <!-- Modal per dividere il conto -->
+  <!-- Modal per dividere il conto - NUOVO LAYOUT 2 COLONNE -->
   <div class="modal-overlay" id="splitModal">
-    <div class="modal-content split-modal-content">
+    <div class="modal-content" style="max-width: 1200px; max-height: 90vh;">
       <div class="modal-header">
         <div class="modal-title" id="splitModalTitle">💳 Dividi Conto</div>
         <button class="modal-close" onclick="closeSplitModal()">&times;</button>
       </div>
-      <div class="modal-body">
-        <!-- Lista articoli selezionabili -->
-        <h4>Seleziona articoli da pagare:</h4>
-        <div class="split-items-list" id="splitItemsList">
-          <!-- Gli articoli verranno inseriti qui dinamicamente -->
+      <div class="modal-body" style="overflow: hidden; padding: 0;">
+
+        <!-- LAYOUT 2 COLONNE -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0; height: calc(90vh - 200px);">
+
+          <!-- COLONNA SINISTRA: Articoli da pagare -->
+          <div style="border-right: 3px solid #e2e8f0; padding: 1.5rem; overflow-y: auto; background: #f7fafc;">
+            <h3 style="margin-bottom: 1rem; color: #2d3748; display: flex; align-items: center; gap: 0.5rem;">
+              <span>🍽️</span>
+              <span>Articoli Ordine</span>
+            </h3>
+            <p style="font-size: 0.9rem; color: #718096; margin-bottom: 1rem;">
+              Clicca sugli articoli per spostarli nel pagamento →
+            </p>
+            <div id="splitItemsLeft">
+              <!-- Articoli disponibili -->
+            </div>
+          </div>
+
+          <!-- COLONNA DESTRA: Articoli selezionati per pagamento -->
+          <div style="padding: 1.5rem; display: flex; flex-direction: column; background: white;">
+            <h3 style="margin-bottom: 1rem; color: #667eea; display: flex; align-items: center; gap: 0.5rem;">
+              <span>💳</span>
+              <span>Da Pagare</span>
+            </h3>
+
+            <div id="splitItemsRight" style="flex: 1; overflow-y: auto; margin-bottom: 1rem;
+                 min-height: 200px; border: 2px dashed #cbd5e0; border-radius: 0.8rem; padding: 1rem;">
+              <div style="text-align: center; color: #a0aec0; padding: 3rem;">
+                Clicca sugli articoli a sinistra per aggiungerli qui
+              </div>
+            </div>
+
+            <!-- Totale e opzioni -->
+            <div style="border-top: 3px solid #e2e8f0; padding-top: 1rem;">
+              <div style="display: flex; justify-content: space-between; align-items: center;
+                   font-size: 1.8rem; font-weight: bold; margin-bottom: 1rem;">
+                <span style="color: #2d3748;">TOTALE</span>
+                <span style="color: #667eea;" id="splitTotal">€0.00</span>
+              </div>
+
+              <label style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;
+                     font-size: 1rem; cursor: pointer;">
+                <input type="checkbox" id="printReceiptCheckbox" checked
+                       style="width: 1.2rem; height: 1.2rem; cursor: pointer;">
+                <span>Stampa conto parziale</span>
+              </label>
+
+              <button id="splitPayButton" onclick="processSplit()" disabled
+                      style="width: 100%; padding: 1.2rem; background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+                      color: white; border: none; border-radius: 0.8rem; font-weight: bold; font-size: 1.2rem;
+                      cursor: pointer; transition: all 0.2s;">
+                ✅ PAGAMENTO COMPLETATO
+              </button>
+            </div>
+          </div>
+
         </div>
 
-        <!-- Riepilogo -->
-        <div class="split-summary">
-          <div class="split-total" id="splitTotal">Totale da pagare: €0.00</div>
-          <label>
-            <input type="checkbox" id="printReceiptCheckbox" checked>
-            Stampa conto parziale
-          </label>
+        <!-- STORICO PAGAMENTI (sotto, solo se ci sono ancora articoli) -->
+        <div id="paidHistorySection" style="border-top: 3px solid #e2e8f0; padding: 1rem; background: #fffbeb; display: none;">
+          <div style="cursor: pointer; font-weight: 600; display: flex; justify-content: space-between; align-items: center;"
+               onclick="togglePaidHistory()">
+            <span>📋 Storico Pagamenti Parziali</span>
+            <span id="paidHistoryArrow">▼</span>
+          </div>
+          <div id="paidHistoryContent" style="margin-top: 1rem; display: none;">
+            <!-- Contenuto storico -->
+          </div>
         </div>
 
-        <!-- Storico pagamenti -->
-        <div class="paid-history" id="paidHistory">
-          <div class="paid-history-header" onclick="togglePaidHistory()">
-            📋 Storico Pagamenti
-          </div>
-          <div class="paid-history-content" id="paidHistoryContent">
-            <!-- I pagamenti precedenti verranno inseriti qui -->
-          </div>
-        </div>
-      </div>
-      <div class="modal-actions">
-        <button class="modal-btn modal-btn-secondary" onclick="closeSplitModal()">Annulla</button>
-        <button class="modal-btn modal-btn-primary" id="splitPayButton" onclick="processSplit()" disabled>💳 Processa Pagamento</button>
       </div>
     </div>
   </div>
@@ -1012,26 +1097,36 @@
     async function openSplitModal(orderId, tavolo) {
       try {
         currentSplitOrder = { id: orderId, tavolo: tavolo };
-        
+
         // Carica dettagli ordine
         const res = await fetch(`/orders/${orderId}/details`);
         const orderDetails = await res.json();
-        
+
         if (!res.ok) {
           throw new Error(orderDetails.error || 'Errore caricamento ordine');
         }
-        
+
         splitItems = orderDetails.current_items;
         selectedSplitItems = [];
-        
+
         document.getElementById('splitModalTitle').textContent = `💳 Dividi Conto - Tavolo ${tavolo}`;
-        
+
         // Popola lista articoli
         renderSplitItems();
-        
-        // Popola storico pagamenti
-        renderPaymentHistory(orderDetails.payments_history);
-        
+
+        // Gestisci visibilità storico pagamenti
+        const paidHistorySection = document.getElementById('paidHistory');
+        const hasRemainingItems = splitItems.length > 0;
+        const hasPayments = orderDetails.has_payments && orderDetails.payments_history.length > 0;
+
+        // Mostra storico SOLO se ci sono pagamenti E ci sono ancora articoli rimanenti
+        if (hasPayments && hasRemainingItems) {
+          paidHistorySection.style.display = 'block';
+          renderPaymentHistory(orderDetails.payments_history);
+        } else {
+          paidHistorySection.style.display = 'none';
+        }
+
         // Mostra badge se ci sono pagamenti
         if (orderDetails.has_payments) {
           const badge = document.createElement('span');
@@ -1039,116 +1134,204 @@
           badge.style.marginLeft = '0.5rem';
           document.getElementById('splitModalTitle').appendChild(badge);
         }
-        
+
         document.getElementById('splitModal').style.display = 'flex';
-        
+
       } catch (error) {
         console.error('Errore:', error);
         showToast(`❌ Errore: ${error.message}`, true);
       }
     }
 
-    // MODIFICATO: Mostra ogni singolo articolo separatamente
+    // NUOVA IMPLEMENTAZIONE 2 COLONNE
     function renderSplitItems() {
-      const container = document.getElementById('splitItemsList');
-      container.innerHTML = '';
-      
+      const leftContainer = document.getElementById('splitItemsLeft');
+      leftContainer.innerHTML = '';
+
       if (splitItems.length === 0) {
-        container.innerHTML = '<div style="text-align: center; color: #666; font-style: italic;">Nessun articolo disponibile</div>';
+        leftContainer.innerHTML = '<div style="text-align: center; color: #a0aec0; padding: 2rem; font-style: italic;">Nessun articolo disponibile</div>';
         return;
       }
-      
+
       let itemIndex = 0;
-      
+
       // Espandi ogni articolo in base alla quantità
       splitItems.forEach((item) => {
         // Crea un elemento separato per ogni unità
         for (let i = 0; i < item.quantity; i++) {
-          const div = document.createElement('div');
-          div.className = 'split-item';
-          
-          const checkbox = document.createElement('input');
-          checkbox.type = 'checkbox';
-          checkbox.id = `split-item-${itemIndex}`;
-          checkbox.dataset.itemName = item.name;
-          checkbox.dataset.itemNote = item.note || '';
-          checkbox.dataset.unitPrice = item.unit_price;
-          checkbox.onchange = () => updateSelectedItems();
-          
-          const details = document.createElement('div');
-          details.className = 'split-item-details';
-          
-          const nameDiv = document.createElement('div');
-          nameDiv.innerHTML = `
-            <span class="split-item-name">${item.name}</span>
-            ${item.note ? `<span class="split-item-note">(${item.note})</span>` : ''}
+          const card = document.createElement('div');
+          card.className = 'split-item-card';
+          card.dataset.index = itemIndex;
+          card.dataset.itemName = item.name;
+          card.dataset.itemNote = item.note || '';
+          card.dataset.unitPrice = item.unit_price;
+
+          card.innerHTML = `
+            <div style="flex: 1;">
+              <div style="font-weight: 600; color: #2d3748; margin-bottom: 0.2rem;">
+                ${item.name}
+              </div>
+              ${item.note ? `<div style="font-size: 0.85rem; color: #718096; font-style: italic;">(${item.note})</div>` : ''}
+            </div>
+            <div style="font-size: 1.1rem; font-weight: bold; color: #667eea;">
+              €${item.unit_price.toFixed(2)}
+            </div>
           `;
-          
-          const priceDiv = document.createElement('div');
-          priceDiv.className = 'split-item-price';
-          priceDiv.textContent = `€${item.unit_price.toFixed(2)}`;
-          
-          details.appendChild(nameDiv);
-          details.appendChild(priceDiv);
-          
-          div.appendChild(checkbox);
-          div.appendChild(details);
-          
-          // Rendi cliccabile l'intero div
-          div.onclick = (e) => {
-            if (e.target !== checkbox) {
-              checkbox.checked = !checkbox.checked;
-              updateSelectedItems();
-            }
-          };
-          
-          container.appendChild(div);
+
+          card.onclick = () => moveItemToPayment(itemIndex);
+
+          leftContainer.appendChild(card);
           itemIndex++;
         }
       });
-      
-      updateSelectedItems();
+
+      renderSelectedItems();
     }
 
-    // MODIFICATO: Aggrega gli articoli selezionati per inviarli al server
-    function updateSelectedItems() {
-      const checkboxes = document.querySelectorAll('#splitItemsList input[type="checkbox"]');
-      
-      // Mappa per raggruppare articoli identici
-      const itemsMap = new Map();
+    function moveItemToPayment(index) {
+      const leftContainer = document.getElementById('splitItemsLeft');
+      const card = leftContainer.querySelector(`[data-index="${index}"]`);
+
+      if (!card) return;
+
+      const name = card.dataset.itemName;
+      const note = card.dataset.itemNote;
+      const unitPrice = parseFloat(card.dataset.unitPrice);
+
+      // Aggiungi agli articoli selezionati
+      selectedSplitItems.push({
+        name: name,
+        note: note,
+        unit_price: unitPrice,
+        quantity: 1,
+        total_price: unitPrice,
+        sourceIndex: index
+      });
+
+      // Rimuovi dalla colonna sinistra
+      card.remove();
+
+      // Aggiorna colonna destra
+      renderSelectedItems();
+    }
+
+    function removeItemFromPayment(selectedIndex) {
+      const removed = selectedSplitItems.splice(selectedIndex, 1)[0];
+
+      // Ricrea la card nella colonna sinistra
+      const leftContainer = document.getElementById('splitItemsLeft');
+      const card = document.createElement('div');
+      card.className = 'split-item-card';
+      card.dataset.index = removed.sourceIndex;
+      card.dataset.itemName = removed.name;
+      card.dataset.itemNote = removed.note;
+      card.dataset.unitPrice = removed.unit_price;
+
+      card.innerHTML = `
+        <div style="flex: 1;">
+          <div style="font-weight: 600; color: #2d3748; margin-bottom: 0.2rem;">
+            ${removed.name}
+          </div>
+          ${removed.note ? `<div style="font-size: 0.85rem; color: #718096; font-style: italic;">(${removed.note})</div>` : ''}
+        </div>
+        <div style="font-size: 1.1rem; font-weight: bold; color: #667eea;">
+          €${removed.unit_price.toFixed(2)}
+        </div>
+      `;
+
+      card.onclick = () => moveItemToPayment(removed.sourceIndex);
+      leftContainer.appendChild(card);
+
+      // Aggiorna colonna destra
+      renderSelectedItems();
+    }
+
+    function renderSelectedItems() {
+      const rightContainer = document.getElementById('splitItemsRight');
+      const totalDisplay = document.getElementById('splitSelectedTotal');
+      const payButton = document.getElementById('splitPayButton');
+
+      if (selectedSplitItems.length === 0) {
+        rightContainer.innerHTML = '<div style="text-align: center; color: #a0aec0; padding: 2rem; font-style: italic;">Nessun articolo selezionato</div>';
+        totalDisplay.textContent = '€0.00';
+        payButton.disabled = true;
+        return;
+      }
+
+      // Raggruppa articoli identici per visualizzazione
+      const grouped = {};
       let total = 0;
-      
-      checkboxes.forEach((checkbox) => {
-        if (checkbox.checked) {
-          const name = checkbox.dataset.itemName;
-          const note = checkbox.dataset.itemNote;
-          const unitPrice = parseFloat(checkbox.dataset.unitPrice);
-          
-          // Crea una chiave univoca per raggruppare
-          const key = `${name}|${note}`;
-          
-          if (itemsMap.has(key)) {
-            const existing = itemsMap.get(key);
-            existing.quantity += 1;
-            existing.total_price = existing.quantity * unitPrice;
-          } else {
-            itemsMap.set(key, {
-              name: name,
-              note: note,
-              unit_price: unitPrice,
-              quantity: 1,
-              total_price: unitPrice
-            });
-          }
-          
-          total += unitPrice;
+
+      selectedSplitItems.forEach((item, idx) => {
+        const key = `${item.name}|${item.note}`;
+        if (!grouped[key]) {
+          grouped[key] = {
+            name: item.name,
+            note: item.note,
+            unit_price: item.unit_price,
+            quantity: 0,
+            indices: []
+          };
+        }
+        grouped[key].quantity++;
+        grouped[key].indices.push(idx);
+        total += item.unit_price;
+      });
+
+      rightContainer.innerHTML = '';
+
+      Object.values(grouped).forEach(group => {
+        const card = document.createElement('div');
+        card.className = 'split-selected-card';
+
+        card.innerHTML = `
+          <div style="flex: 1;">
+            <div style="font-weight: 600; color: #2d3748; margin-bottom: 0.2rem;">
+              ${group.quantity}× ${group.name}
+            </div>
+            ${group.note ? `<div style="font-size: 0.85rem; color: #718096; font-style: italic;">(${group.note})</div>` : ''}
+          </div>
+          <div>
+            <div style="font-size: 1.1rem; font-weight: bold; color: #48bb78;">
+              €${(group.quantity * group.unit_price).toFixed(2)}
+            </div>
+            <button onclick="removeItemFromPayment(${group.indices[0]})"
+                    style="margin-top: 0.3rem; background: #fc8181; color: white; border: none; padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.85rem; cursor: pointer;">
+              ✕ Rimuovi
+            </button>
+          </div>
+        `;
+
+        rightContainer.appendChild(card);
+      });
+
+      totalDisplay.textContent = `€${total.toFixed(2)}`;
+      payButton.disabled = false;
+    }
+
+    // Funzione helper per aggregare articoli per l'invio al server
+    function aggregateSelectedItems() {
+      const itemsMap = new Map();
+
+      selectedSplitItems.forEach((item) => {
+        const key = `${item.name}|${item.note}`;
+
+        if (itemsMap.has(key)) {
+          const existing = itemsMap.get(key);
+          existing.quantity += 1;
+          existing.total_price = existing.quantity * item.unit_price;
+        } else {
+          itemsMap.set(key, {
+            name: item.name,
+            note: item.note,
+            unit_price: item.unit_price,
+            quantity: 1,
+            total_price: item.unit_price
+          });
         }
       });
-      
-      selectedSplitItems = Array.from(itemsMap.values());
-      
-      document.getElementById('splitTotal').textContent = `Totale da pagare: €${total.toFixed(2)}`;
-      document.getElementById('splitPayButton').disabled = selectedSplitItems.length === 0;
+
+      return Array.from(itemsMap.values());
     }
 
     function renderPaymentHistory(payments) {
@@ -1190,38 +1373,41 @@
         showToast('❌ Seleziona almeno un articolo', true);
         return;
       }
-      
+
       const printReceipt = document.getElementById('printReceiptCheckbox').checked;
-      
+
+      // Aggrega gli articoli identici per l'invio al server
+      const aggregatedItems = aggregateSelectedItems();
+
       try {
         const res = await fetch(`/orders/${currentSplitOrder.id}/split`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            paid_items: selectedSplitItems,
+            paid_items: aggregatedItems,
             print_receipt: printReceipt
           })
         });
-        
+
         const result = await res.json();
-        
+
         if (!res.ok) {
           throw new Error(result.error || 'Errore durante la divisione del conto');
         }
-        
-        const message = printReceipt 
+
+        const message = printReceipt
           ? `✅ Conto parziale di €${result.importo_pagato.toFixed(2)} processato e stampato!`
           : `✅ Conto parziale di €${result.importo_pagato.toFixed(2)} processato!`;
-        
+
         showToast(message);
-        
+
         if (result.ordine_completato) {
           showToast('🎉 Ordine completamente pagato!');
         }
-        
+
         closeSplitModal();
         loadOrders();
-        
+
       } catch (error) {
         console.error('Errore:', error);
         showToast(`❌ Errore: ${error.message}`, true);
@@ -1445,6 +1631,9 @@
     let menuData = [];
     let addItemsCart = [];
     let selectedAddCategory = '';
+    let aggiunte = {};
+    let rimozioni = {};
+    let itemInCustomize = null;
 
     async function openAddItemsModal(orderId, tavolo) {
       currentAddItemsOrder = { id: orderId, tavolo: tavolo };
@@ -1458,6 +1647,25 @@
         } catch (e) {
           showToast('❌ Errore caricamento menu', true);
           return;
+        }
+      }
+
+      // Carica aggiunte e rimozioni
+      if (Object.keys(aggiunte).length === 0) {
+        try {
+          const resAgg = await fetch('/api/aggiunte');
+          aggiunte = await resAgg.json();
+        } catch (e) {
+          console.error('Errore caricamento aggiunte:', e);
+        }
+      }
+
+      if (Object.keys(rimozioni).length === 0) {
+        try {
+          const resRim = await fetch('/api/rimozioni');
+          rimozioni = await resRim.json();
+        } catch (e) {
+          console.error('Errore caricamento rimozioni:', e);
         }
       }
 
@@ -1573,29 +1781,48 @@
       let total = 0;
 
       addItemsCart.forEach((item, index) => {
-        const itemTotal = item.prezzo * item.qty;
+        // Calcola prezzo con aggiunte
+        const prezzoBase = item.prezzo * item.qty;
+        const costoAggiunte = (item.aggiunte || []).reduce((sum, a) => sum + (a.prezzo * item.qty), 0);
+        const itemTotal = prezzoBase + costoAggiunte;
         total += itemTotal;
+
+        // Costruisci note visuali
+        let noteHtml = '';
+        if ((item.aggiunte || []).length > 0) {
+          noteHtml += `<div style="font-size: 0.75rem; color: #48bb78; margin-top: 0.3rem;">➕ ${item.aggiunte.map(a => a.nome).join(', ')}</div>`;
+        }
+        if ((item.rimozioni || []).length > 0) {
+          noteHtml += `<div style="font-size: 0.75rem; color: #fc8181; margin-top: 0.3rem;">➖ ${item.rimozioni.map(r => r.nome).join(', ')}</div>`;
+        }
+        if (item.note) {
+          noteHtml += `<div style="font-size: 0.75rem; color: #718096; margin-top: 0.3rem;">📝 ${item.note}</div>`;
+        }
 
         html += `
           <div style="padding: 0.8rem; background: #f7fafc; border: 2px solid #e2e8f0;
                       border-radius: 0.8rem; margin-bottom: 0.8rem;">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.5rem;">
               <div style="flex: 1;">
                 <div style="font-weight: 600;">${item.nome}</div>
-                <div style="color: #667eea; font-weight: bold;">€${itemTotal.toFixed(2)}</div>
+                ${noteHtml}
+                <div style="color: #667eea; font-weight: bold; margin-top: 0.3rem;">€${itemTotal.toFixed(2)}</div>
               </div>
-              <div style="display: flex; align-items: center; gap: 0.5rem;">
-                <button onclick="changeTempQty(${index}, -1)"
-                        style="width: 2rem; height: 2rem; border: 2px solid #667eea; border-radius: 0.5rem;
-                        background: white; color: #667eea; font-weight: bold; cursor: pointer; font-size: 1.2rem;">−</button>
-                <div style="font-weight: bold; min-width: 1.5rem; text-align: center;">${item.qty}</div>
-                <button onclick="changeTempQty(${index}, 1)"
-                        style="width: 2rem; height: 2rem; border: 2px solid #667eea; border-radius: 0.5rem;
-                        background: white; color: #667eea; font-weight: bold; cursor: pointer; font-size: 1.2rem;">+</button>
-                <button onclick="removeTempCartItem(${index})"
-                        style="width: 2rem; height: 2rem; border: none; border-radius: 0.5rem;
-                        background: #fc8181; color: white; cursor: pointer; font-size: 1rem;">🗑️</button>
-              </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <button onclick="changeTempQty(${index}, -1)"
+                      style="width: 2rem; height: 2rem; border: 2px solid #667eea; border-radius: 0.5rem;
+                      background: white; color: #667eea; font-weight: bold; cursor: pointer; font-size: 1.2rem;">−</button>
+              <div style="font-weight: bold; min-width: 1.5rem; text-align: center;">${item.qty}</div>
+              <button onclick="changeTempQty(${index}, 1)"
+                      style="width: 2rem; height: 2rem; border: 2px solid #667eea; border-radius: 0.5rem;
+                      background: white; color: #667eea; font-weight: bold; cursor: pointer; font-size: 1.2rem;">+</button>
+              <button onclick="customizeTempItem(${index})"
+                      style="width: 2rem; height: 2rem; border: 2px solid #667eea; border-radius: 0.5rem;
+                      background: white; cursor: pointer; font-size: 1rem;">🎨</button>
+              <button onclick="removeTempCartItem(${index})"
+                      style="width: 2rem; height: 2rem; border: none; border-radius: 0.5rem;
+                      background: #fc8181; color: white; cursor: pointer; font-size: 1rem;">🗑️</button>
             </div>
           </div>`;
       });
@@ -1603,6 +1830,97 @@
       container.innerHTML = html;
       totalEl.textContent = total.toFixed(2);
       confirmBtn.disabled = false;
+    }
+
+    function customizeTempItem(index) {
+      itemInCustomize = index;
+      const item = addItemsCart[index];
+
+      let html = '<div style="padding: 1rem; background: white; border-radius: 0.8rem; margin-top: 1rem;">';
+      html += `<h4 style="margin-bottom: 0.8rem; color: #667eea;">🎨 Personalizza: ${item.nome}</h4>`;
+
+      // Aggiunte
+      if (Object.keys(aggiunte).length > 0) {
+        html += '<div style="margin-bottom: 1rem;"><h5 style="margin-bottom: 0.5rem;">➕ Aggiunte</h5>';
+        Object.keys(aggiunte).forEach(cat => {
+          aggiunte[cat].forEach(agg => {
+            const isSelected = (item.aggiunte || []).some(a => a.id === agg.id);
+            const style = isSelected ? 'background: #48bb78; color: white; border-color: #48bb78;' : '';
+            html += `<button onclick="toggleTempAggiunta(${agg.id}, '${agg.nome.replace(/'/g, "\\'")}', ${agg.prezzo})"
+                      style="padding: 0.5rem 0.8rem; border: 2px solid #e2e8f0; border-radius: 0.5rem;
+                      background: white; cursor: pointer; margin: 0.3rem; ${style}">
+                      ${agg.nome} +€${agg.prezzo.toFixed(2)}
+                    </button>`;
+          });
+        });
+        html += '</div>';
+      }
+
+      // Rimozioni
+      if (Object.keys(rimozioni).length > 0) {
+        html += '<div style="margin-bottom: 1rem;"><h5 style="margin-bottom: 0.5rem;">➖ Rimozioni</h5>';
+        Object.keys(rimozioni).forEach(cat => {
+          rimozioni[cat].forEach(rim => {
+            const isSelected = (item.rimozioni || []).some(r => r.id === rim.id);
+            const style = isSelected ? 'background: #fc8181; color: white; border-color: #fc8181;' : '';
+            html += `<button onclick="toggleTempRimozione(${rim.id}, '${rim.nome.replace(/'/g, "\\'")}')"
+                      style="padding: 0.5rem 0.8rem; border: 2px solid #e2e8f0; border-radius: 0.5rem;
+                      background: white; cursor: pointer; margin: 0.3rem; ${style}">
+                      ${rim.nome}
+                    </button>`;
+          });
+        });
+        html += '</div>';
+      }
+
+      // Note
+      html += '<div style="margin-bottom: 1rem;"><h5 style="margin-bottom: 0.5rem;">📝 Note</h5>';
+      html += `<textarea id="customizeNoteInput" style="width: 100%; padding: 0.8rem; border: 2px solid #e2e8f0;
+                border-radius: 0.5rem; font-size: 1rem; resize: vertical; min-height: 80px;"
+                placeholder="Es: poco sale, ben cotto...">${item.note || ''}</textarea>`;
+      html += '</div>';
+
+      html += `<button onclick="saveCustomization()" style="width: 100%; padding: 0.8rem; background: #667eea;
+                color: white; border: none; border-radius: 0.5rem; font-weight: bold; cursor: pointer;">
+                ✅ Salva Personalizzazione</button>`;
+      html += '</div>';
+
+      const container = document.getElementById('tempCartItems');
+      container.innerHTML = html;
+    }
+
+    function toggleTempAggiunta(id, nome, prezzo) {
+      const item = addItemsCart[itemInCustomize];
+      if (!item.aggiunte) item.aggiunte = [];
+
+      const index = item.aggiunte.findIndex(a => a.id === id);
+      if (index >= 0) {
+        item.aggiunte.splice(index, 1);
+      } else {
+        item.aggiunte.push({ id, nome, prezzo });
+      }
+      customizeTempItem(itemInCustomize);
+    }
+
+    function toggleTempRimozione(id, nome) {
+      const item = addItemsCart[itemInCustomize];
+      if (!item.rimozioni) item.rimozioni = [];
+
+      const index = item.rimozioni.findIndex(r => r.id === id);
+      if (index >= 0) {
+        item.rimozioni.splice(index, 1);
+      } else {
+        item.rimozioni.push({ id, nome });
+      }
+      customizeTempItem(itemInCustomize);
+    }
+
+    function saveCustomization() {
+      const note = document.getElementById('customizeNoteInput').value.trim();
+      addItemsCart[itemInCustomize].note = note;
+      itemInCustomize = null;
+      updateTempCart();
+      showToast('✅ Personalizzazione salvata!');
     }
 
     async function confirmAddItems() {

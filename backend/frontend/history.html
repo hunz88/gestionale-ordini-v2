@@ -1115,7 +1115,7 @@
         renderSplitItems();
 
         // Gestisci visibilità storico pagamenti
-        const paidHistorySection = document.getElementById('paidHistory');
+        const paidHistorySection = document.getElementById('paidHistorySection');
         const hasRemainingItems = splitItems.length > 0;
         const hasPayments = orderDetails.has_payments && orderDetails.payments_history.length > 0;
 
@@ -1248,11 +1248,11 @@
 
     function renderSelectedItems() {
       const rightContainer = document.getElementById('splitItemsRight');
-      const totalDisplay = document.getElementById('splitSelectedTotal');
+      const totalDisplay = document.getElementById('splitTotal');
       const payButton = document.getElementById('splitPayButton');
 
       if (selectedSplitItems.length === 0) {
-        rightContainer.innerHTML = '<div style="text-align: center; color: #a0aec0; padding: 2rem; font-style: italic;">Nessun articolo selezionato</div>';
+        rightContainer.innerHTML = '<div style="text-align: center; color: #a0aec0; padding: 2rem; font-style: italic;">Clicca sugli articoli a sinistra per aggiungerli qui</div>';
         totalDisplay.textContent = '€0.00';
         payButton.disabled = true;
         return;
@@ -1365,7 +1365,16 @@
     }
 
     function togglePaidHistory() {
-      document.getElementById('paidHistory').classList.toggle('expanded');
+      const content = document.getElementById('paidHistoryContent');
+      const arrow = document.getElementById('paidHistoryArrow');
+
+      if (content.style.display === 'none') {
+        content.style.display = 'block';
+        arrow.textContent = '▲';
+      } else {
+        content.style.display = 'none';
+        arrow.textContent = '▼';
+      }
     }
 
     async function processSplit() {
@@ -1419,7 +1428,15 @@
       currentSplitOrder = null;
       splitItems = [];
       selectedSplitItems = [];
-      document.getElementById('paidHistory').classList.remove('expanded');
+
+      // Resetta storico pagamenti
+      const paidHistorySection = document.getElementById('paidHistorySection');
+      const paidHistoryContent = document.getElementById('paidHistoryContent');
+      const arrow = document.getElementById('paidHistoryArrow');
+
+      paidHistorySection.style.display = 'none';
+      paidHistoryContent.style.display = 'none';
+      arrow.textContent = '▼';
     }
 
     // Funzione per unire ordini dello stesso tavolo

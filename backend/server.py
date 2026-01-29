@@ -799,8 +799,10 @@ def add_items_to_order(oid):
         if new_items:
             save_statistics(new_items, o.tavolo)
 
-        # Stampa cucina (solo nuovi articoli)
+        # Stampa cucina E bancone (solo nuovi articoli)
         cucina_items = []
+        bancone_items = []
+
         for item in new_items:
             voce = Voce.query.filter_by(id=item.get('id')).first()
             destinazione = 'cucina'
@@ -812,24 +814,33 @@ def add_items_to_order(oid):
             else:
                 destinazione = 'bancone'
 
+            # Costruisci riga con personalizzazioni
             line = f"{item['qty']}× {item['nome']}"
+            if item.get('aggiunte'):
+                line += f" (+ {', '.join(a['nome'] for a in item['aggiunte'])})"
+            if item.get('rimozioni'):
+                line += f" (− {', '.join(r['nome'] for r in item['rimozioni'])})"
             if item.get('note'):
                 line += f" ({item['note']})"
 
+            # Aggiungi alle liste appropriate
             if destinazione in ['cucina', 'entrambi']:
                 cucina_items.append(line)
+            if destinazione in ['bancone', 'entrambi']:
+                bancone_items.append(line)
 
+        # Stampa SOLO nuovi articoli in cucina
         if cucina_items:
             enqueue_print(o.tavolo, '\n'.join(cucina_items), 'cucina')
 
-        # Stampa bar (ordine completo aggiornato)
+        # Stampa SOLO nuovi articoli al bancone
+        if bancone_items:
+            enqueue_print(o.tavolo, '\n'.join(bancone_items), 'bar')
+
+        logging.info(f"✓ Aggiunti {len(new_items)} articoli all'ordine {oid} - Tavolo {o.tavolo} (Cucina: {len(cucina_items)}, Bancone: {len(bancone_items)})")
+
         total = calculate_total_from_text(o.testo)
-        ordine_con_totale = add_total_to_order(o.testo, total)
-        enqueue_print(o.tavolo, ordine_con_totale, 'bar')
-
-        logging.info(f"✓ Aggiunti {len(new_items)} articoli all'ordine {oid} - Tavolo {o.tavolo}")
-
-        return jsonify(ok=True, new_total=total, updated_text=ordine_con_totale)
+        return jsonify(ok=True, new_total=total, updated_text=o.testo)
     except Exception as e:
         logging.error(f"Errore add_items: {e}")
         return jsonify(error=str(e)), 500
@@ -860,24 +871,42 @@ def split_order(oid):
         
         all_items = parse_order_text(comanda.testo)
         remaining_items = []
-        
+
+        # Crea una copia di paid_items per tracciare quanto è stato pagato
+        paid_items_tracking = []
+        for paid_item in paid_items:
+            paid_items_tracking.append({
+                'name': paid_item['name'],
+                'note': paid_item.get('note', ''),
+                'unit_price': paid_item['unit_price'],
+                'quantity_left': paid_item['quantity']
+            })
+
         for item in all_items:
-            found_match = False
-            for paid_item in paid_items:
-                if (item['name'] == paid_item['name'] and 
-                    item['note'] == paid_item.get('note', '') and
-                    abs(item['unit_price'] - paid_item['unit_price']) < 0.01):
-                    if item['quantity'] > paid_item['quantity']:
-                        remaining_qty = item['quantity'] - paid_item['quantity']
-                        remaining_items.append({
-                            **item,
-                            'quantity': remaining_qty,
-                            'total_price': remaining_qty * item['unit_price']
-                        })
-                    found_match = True
-                    break
-            if not found_match:
-                remaining_items.append(item)
+            remaining_qty = item['quantity']
+
+            # Cerca match e sottrai le quantità pagate
+            for paid_track in paid_items_tracking:
+                if (item['name'] == paid_track['name'] and
+                    item['note'] == paid_track['note'] and
+                    abs(item['unit_price'] - paid_track['unit_price']) < 0.01 and
+                    paid_track['quantity_left'] > 0):
+
+                    # Calcola quanto sottrarre
+                    qty_to_subtract = min(remaining_qty, paid_track['quantity_left'])
+                    remaining_qty -= qty_to_subtract
+                    paid_track['quantity_left'] -= qty_to_subtract
+
+                    if remaining_qty <= 0:
+                        break
+
+            # Se rimane qualcosa, aggiungilo agli articoli rimanenti
+            if remaining_qty > 0:
+                remaining_items.append({
+                    **item,
+                    'quantity': remaining_qty,
+                    'total_price': remaining_qty * item['unit_price']
+                })
         
         if remaining_items:
             comanda.testo = rebuild_order_text(remaining_items)
@@ -889,12 +918,16 @@ def split_order(oid):
         if print_receipt:
             partial_bill_text = create_partial_bill_text(paid_items, comanda.tavolo)
             enqueue_print(comanda.tavolo, partial_bill_text, 'bar')
-        
-        logging.info(f"💳 Conto diviso ordine {oid}: €{importo_pagato:.2f}")
-        
+
+        # Calcola totale rimanente per verifica
+        remaining_total = sum(item['total_price'] for item in remaining_items)
+
+        logging.info(f"💳 Conto diviso ordine {oid} Tavolo {comanda.tavolo}: Pagato €{importo_pagato:.2f}, Rimanente €{remaining_total:.2f} ({len(remaining_items)} articoli)")
+
         return jsonify({
             'ok': True,
             'importo_pagato': importo_pagato,
+            'totale_rimanente': remaining_total,
             'articoli_rimanenti': len(remaining_items),
             'ordine_completato': len(remaining_items) == 0
         })

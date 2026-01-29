@@ -1283,6 +1283,8 @@
       Object.values(grouped).forEach(group => {
         const card = document.createElement('div');
         card.className = 'split-selected-card';
+        card.style.cursor = 'pointer';
+        card.title = 'Clicca per rimuovere dal pagamento';
 
         card.innerHTML = `
           <div style="flex: 1;">
@@ -1291,22 +1293,60 @@
             </div>
             ${group.note ? `<div style="font-size: 0.85rem; color: #718096; font-style: italic;">(${group.note})</div>` : ''}
           </div>
-          <div>
+          <div style="display: flex; align-items: center; gap: 0.8rem;">
             <div style="font-size: 1.1rem; font-weight: bold; color: #48bb78;">
               €${(group.quantity * group.unit_price).toFixed(2)}
             </div>
-            <button onclick="removeItemFromPayment(${group.indices[0]})"
-                    style="margin-top: 0.3rem; background: #fc8181; color: white; border: none; padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.85rem; cursor: pointer;">
-              ✕ Rimuovi
-            </button>
+            <div style="font-size: 1.2rem; color: #fc8181;">
+              ←
+            </div>
           </div>
         `;
+
+        // Rendi l'intera card cliccabile per rimuovere UN elemento del gruppo
+        card.onclick = () => {
+          removeOneItemFromPayment(group.indices[group.indices.length - 1]);
+        };
 
         rightContainer.appendChild(card);
       });
 
       totalDisplay.textContent = `€${total.toFixed(2)}`;
       payButton.disabled = false;
+    }
+
+    // Nuova funzione per rimuovere UN singolo elemento dalla colonna destra
+    function removeOneItemFromPayment(selectedIndex) {
+      const removed = selectedSplitItems.splice(selectedIndex, 1)[0];
+
+      // Ricrea la card nella colonna sinistra
+      const leftContainer = document.getElementById('splitItemsLeft');
+      const card = document.createElement('div');
+      card.className = 'split-item-card';
+      card.dataset.index = removed.sourceIndex;
+      card.dataset.itemName = removed.name;
+      card.dataset.itemNote = removed.note;
+      card.dataset.unitPrice = removed.unit_price;
+
+      card.innerHTML = `
+        <div style="flex: 1;">
+          <div style="font-weight: 600; color: #2d3748; margin-bottom: 0.2rem;">
+            ${removed.name}
+          </div>
+          ${removed.note ? `<div style="font-size: 0.85rem; color: #718096; font-style: italic;">(${removed.note})</div>` : ''}
+        </div>
+        <div style="font-size: 1.1rem; font-weight: bold; color: #667eea;">
+          €${removed.unit_price.toFixed(2)}
+        </div>
+      `;
+
+      card.onclick = () => moveItemToPayment(removed.sourceIndex);
+      card.style.cursor = 'pointer';
+      card.title = 'Clicca per aggiungere al pagamento';
+      leftContainer.appendChild(card);
+
+      // Aggiorna colonna destra
+      renderSelectedItems();
     }
 
     // Funzione helper per aggregare articoli per l'invio al server

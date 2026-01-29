@@ -7,11 +7,68 @@ Questo test DEVE essere fatto con un ordine NUOVO, non con ordini vecchi che han
 
 ## 📋 Test Plan - Step by Step
 
+### FASE 0: Verifica Database (IMPORTANTE!)
+
+**Prima di iniziare il test, verifica che il database abbia gli articoli:**
+
+```bash
+cd ~/gestionale-test/gestionale-ordini-v2
+python3 -c "
+import sqlite3
+conn = sqlite3.connect('backend/ordini.db')
+cursor = conn.cursor()
+cursor.execute('SELECT COUNT(*) FROM voce')
+count = cursor.fetchone()[0]
+print(f'Articoli nel database: {count}')
+conn.close()
+"
+```
+
+- ✅ Se vedi un numero > 0 (es. 155): OK, procedi con FASE 1
+- ❌ Se vedi 0: DEVI copiare gli articoli prima!
+
+**Se il database è vuoto, copia gli articoli:**
+
+```bash
+# Esporta articoli dal database originale
+python3 -c "
+import sqlite3
+
+# Database originale
+conn_orig = sqlite3.connect('/home/sunsetbar/gestionale-ordini/ordini.db')
+cursor_orig = conn_orig.cursor()
+
+# Database test
+conn_test = sqlite3.connect('backend/ordini.db')
+cursor_test = conn_test.cursor()
+
+# Copia tutte le voci
+cursor_orig.execute('SELECT * FROM voce')
+voci = cursor_orig.fetchall()
+
+# Inserisci nel database test
+for voce in voci:
+    cursor_test.execute('''
+        INSERT OR REPLACE INTO voce
+        (id, nome, prezzo, categoria, disponibile, destinazione_stampa)
+        VALUES (?, ?, ?, ?, ?, ?)
+    ''', voce)
+
+conn_test.commit()
+print(f'✅ Copiati {len(voci)} articoli nel database di test')
+
+conn_orig.close()
+conn_test.close()
+"
+```
+
+---
+
 ### FASE 1: Preparazione (5 minuti)
 
 1. **Apri il terminale e monitora i log in tempo reale:**
 ```bash
-cd /home/user/gestionale-ordini-v2
+cd ~/gestionale-test/gestionale-ordini-v2
 tail -f logs/test.log
 ```
 Lascia questa finestra aperta per vedere cosa succede.

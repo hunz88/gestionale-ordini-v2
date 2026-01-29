@@ -22,8 +22,10 @@ from flask_cors import CORS
 # ══════════════════════════════════════════════════════════════════════════════
 # CONFIG
 # ══════════════════════════════════════════════════════════════════════════════
-BASE_DIR = "/home/sunsetbar/gestionale-ordini-v2"
-DB_FILE = os.path.join(BASE_DIR, "ordini_v2.db")
+# Base directory - directory padre del progetto (gestionale-ordini-v2)
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# Database in backend/ordini.db
+DB_FILE = os.path.join(BASE_DIR, "backend", "ordini.db")
 LOG_DIR = os.path.join(BASE_DIR, "logs")
 
 os.makedirs(LOG_DIR, exist_ok=True)

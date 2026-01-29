@@ -1148,6 +1148,8 @@
       const leftContainer = document.getElementById('splitItemsLeft');
       leftContainer.innerHTML = '';
 
+      console.log('renderSplitItems chiamata, splitItems:', splitItems);
+
       if (splitItems.length === 0) {
         leftContainer.innerHTML = '<div style="text-align: center; color: #a0aec0; padding: 2rem; font-style: italic;">Nessun articolo disponibile</div>';
         return;
@@ -1178,15 +1180,24 @@
             </div>
           `;
 
+          // Event handler con binding diretto
+          const currentIndex = itemIndex;
+          card.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('Click su card sinistra, index:', currentIndex);
+            moveItemToPayment(currentIndex);
+          });
+
           card.style.cursor = 'pointer';
           card.title = 'Clicca per aggiungere al pagamento';
-          card.onclick = () => moveItemToPayment(itemIndex);
 
           leftContainer.appendChild(card);
           itemIndex++;
         }
       });
 
+      console.log('Totale card create a sinistra:', itemIndex);
       renderSelectedItems();
     }
 
@@ -1280,10 +1291,14 @@
           </div>
         `;
 
-        // Rendi l'intera card cliccabile per rimuovere UN elemento del gruppo
-        card.onclick = () => {
-          removeOneItemFromPayment(group.indices[group.indices.length - 1]);
-        };
+        // Event handler con binding diretto per rimuovere UN elemento del gruppo
+        const indexToRemove = group.indices[group.indices.length - 1];
+        card.addEventListener('click', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          console.log('Click su card destra, index da rimuovere:', indexToRemove);
+          removeOneItemFromPayment(indexToRemove);
+        });
 
         rightContainer.appendChild(card);
       });
@@ -1319,7 +1334,15 @@
         </div>
       `;
 
-      card.onclick = () => moveItemToPayment(removed.sourceIndex);
+      // Event handler con binding diretto
+      const indexToMove = removed.sourceIndex;
+      card.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log('Click su card ripristinata a sinistra, index:', indexToMove);
+        moveItemToPayment(indexToMove);
+      });
+
       card.style.cursor = 'pointer';
       card.title = 'Clicca per aggiungere al pagamento';
       leftContainer.appendChild(card);

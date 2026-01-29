@@ -945,17 +945,20 @@
     function calcolaTotale(testoOrdine) {
       let totale = 0.0;
       const righe = testoOrdine.split('\n');
-      
+
       for (let riga of righe) {
         riga = riga.trim();
-        if (!riga || !riga.includes('€')) continue;
-        
+
+        // IMPORTANTE: Salta righe vuote, divisori e TOTALE finale
+        if (!riga || !riga.includes('€') || riga.includes('TOTALE:') || riga.startsWith('-')) continue;
+
         // Trova tutti i prezzi in formato €XX.XX o €XX,XX
         const matches = riga.match(/€(\d+[.,]\d{2})/g);
         if (matches && matches.length > 0) {
           // Prendi l'ultimo prezzo trovato (quello finale della riga)
           const ultimoPrezzo = matches[matches.length - 1];
           const prezzo = parseFloat(ultimoPrezzo.replace('€', '').replace(',', '.'));
+          console.log(`[calcolaTotale] Riga: "${riga}" → Prezzo: €${prezzo}`);
           totale += prezzo;
         } else {
           // Fallback: cerca prezzi senza decimali
@@ -963,11 +966,13 @@
           if (matchesInt && matchesInt.length > 0) {
             const ultimoPrezzo = matchesInt[matchesInt.length - 1];
             const prezzo = parseFloat(ultimoPrezzo.replace('€', ''));
+            console.log(`[calcolaTotale] Riga (int): "${riga}" → Prezzo: €${prezzo}`);
             totale += prezzo;
           }
         }
       }
-      
+
+      console.log(`[calcolaTotale] TOTALE CALCOLATO: €${totale.toFixed(2)}`);
       return totale;
     }
 

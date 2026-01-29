@@ -958,21 +958,26 @@ def get_order_payments(oid):
 
 @app.route("/orders/<int:oid>/details", methods=["GET"])
 def get_order_details(oid):
-    """Restituisce dettagli ordine con articoli NON ancora pagati"""
+    """Restituisce dettagli ordine con articoli NON ancora pagati
+
+    IMPORTANTE: comanda.testo è già aggiornato da split_order() per contenere
+    solo gli articoli rimanenti. NON dobbiamo sottrarre nulla qui!
+    """
     try:
         comanda = Comanda.query.get_or_404(oid)
+
+        # comanda.testo contiene GIÀ solo gli articoli rimanenti da pagare
+        # perché split_order() lo aggiorna ogni volta che si fa un pagamento parziale
         current_items = parse_order_text(comanda.testo)
 
-        # Carica tutti i pagamenti parziali
+        # Carica tutti i pagamenti parziali (solo per storico)
         pagamenti = PagamentiParziali.query.filter_by(comanda_id=oid).order_by(
             PagamentiParziali.created_at.desc()
         ).all()
 
         payments_history = []
         total_paid = 0
-        all_paid_items = []
 
-        # Raccogli TUTTI gli articoli già pagati da tutti i pagamenti
         for p in pagamenti:
             paid_items = json.loads(p.articoli_pagati)
             payments_history.append({
@@ -983,60 +988,22 @@ def get_order_details(oid):
                 'note': p.note
             })
             total_paid += p.importo_pagato
-            all_paid_items.extend(paid_items)
 
-        # Sottrai tutti gli articoli già pagati da current_items
-        # Usa la stessa logica di split_order
-        remaining_items = []
-        paid_items_tracking = []
+        # Calcola totale rimanente DIRETTAMENTE da current_items
+        # (che sono GIÀ solo gli articoli non pagati)
+        current_total = sum(item['total_price'] for item in current_items)
 
-        for paid_item in all_paid_items:
-            paid_items_tracking.append({
-                'name': paid_item['name'],
-                'note': paid_item.get('note', ''),
-                'unit_price': paid_item['unit_price'],
-                'quantity_left': paid_item['quantity']
-            })
-
-        for item in current_items:
-            remaining_qty = item['quantity']
-
-            # Sottrai le quantità già pagate
-            for paid_track in paid_items_tracking:
-                if (item['name'] == paid_track['name'] and
-                    item['note'] == paid_track['note'] and
-                    abs(item['unit_price'] - paid_track['unit_price']) < 0.01 and
-                    paid_track['quantity_left'] > 0):
-
-                    qty_to_subtract = min(remaining_qty, paid_track['quantity_left'])
-                    remaining_qty -= qty_to_subtract
-                    paid_track['quantity_left'] -= qty_to_subtract
-
-                    if remaining_qty <= 0:
-                        break
-
-            # Aggiungi solo se rimane qualcosa da pagare
-            if remaining_qty > 0:
-                remaining_items.append({
-                    **item,
-                    'quantity': remaining_qty,
-                    'total_price': remaining_qty * item['unit_price']
-                })
-
-        # Calcola totale rimanente (articoli non pagati)
-        current_total = sum(item['total_price'] for item in remaining_items)
-
-        logging.info(f"📋 Dettagli ordine {oid}: Totale rimanente €{current_total:.2f}, Già pagato €{total_paid:.2f}")
+        logging.info(f"📋 Dettagli ordine {oid} Tavolo {comanda.tavolo}: Rimanente da pagare €{current_total:.2f}, Già pagato €{total_paid:.2f}, Articoli rimasti: {len(current_items)}")
 
         return jsonify({
             'id': comanda.id,
             'tavolo': comanda.tavolo,
             'testo': comanda.testo,
             'created_at': comanda.created_at.isoformat(),
-            'current_items': remaining_items,  # Solo articoli NON pagati
-            'current_total': current_total,     # Totale articoli NON pagati
-            'payments_history': payments_history,
-            'total_paid': total_paid,
+            'current_items': current_items,      # Articoli da comanda.testo (già solo i rimanenti)
+            'current_total': current_total,      # Totale da pagare
+            'payments_history': payments_history, # Storico pagamenti
+            'total_paid': total_paid,            # Totale già pagato
             'has_payments': len(payments_history) > 0
         })
     except Exception as e:

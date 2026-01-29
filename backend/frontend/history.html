@@ -1178,6 +1178,8 @@
             </div>
           `;
 
+          card.style.cursor = 'pointer';
+          card.title = 'Clicca per aggiungere al pagamento';
           card.onclick = () => moveItemToPayment(itemIndex);
 
           leftContainer.appendChild(card);
@@ -1189,14 +1191,20 @@
     }
 
     function moveItemToPayment(index) {
+      console.log('moveItemToPayment chiamata con index:', index);
       const leftContainer = document.getElementById('splitItemsLeft');
       const card = leftContainer.querySelector(`[data-index="${index}"]`);
 
-      if (!card) return;
+      if (!card) {
+        console.error('Card non trovata per index:', index);
+        return;
+      }
 
       const name = card.dataset.itemName;
       const note = card.dataset.itemNote;
       const unitPrice = parseFloat(card.dataset.unitPrice);
+
+      console.log('Sposto articolo a destra:', name, unitPrice);
 
       // Aggiungi agli articoli selezionati
       selectedSplitItems.push({
@@ -1210,37 +1218,6 @@
 
       // Rimuovi dalla colonna sinistra
       card.remove();
-
-      // Aggiorna colonna destra
-      renderSelectedItems();
-    }
-
-    function removeItemFromPayment(selectedIndex) {
-      const removed = selectedSplitItems.splice(selectedIndex, 1)[0];
-
-      // Ricrea la card nella colonna sinistra
-      const leftContainer = document.getElementById('splitItemsLeft');
-      const card = document.createElement('div');
-      card.className = 'split-item-card';
-      card.dataset.index = removed.sourceIndex;
-      card.dataset.itemName = removed.name;
-      card.dataset.itemNote = removed.note;
-      card.dataset.unitPrice = removed.unit_price;
-
-      card.innerHTML = `
-        <div style="flex: 1;">
-          <div style="font-weight: 600; color: #2d3748; margin-bottom: 0.2rem;">
-            ${removed.name}
-          </div>
-          ${removed.note ? `<div style="font-size: 0.85rem; color: #718096; font-style: italic;">(${removed.note})</div>` : ''}
-        </div>
-        <div style="font-size: 1.1rem; font-weight: bold; color: #667eea;">
-          €${removed.unit_price.toFixed(2)}
-        </div>
-      `;
-
-      card.onclick = () => moveItemToPayment(removed.sourceIndex);
-      leftContainer.appendChild(card);
 
       // Aggiorna colonna destra
       renderSelectedItems();
@@ -1317,7 +1294,9 @@
 
     // Nuova funzione per rimuovere UN singolo elemento dalla colonna destra
     function removeOneItemFromPayment(selectedIndex) {
+      console.log('removeOneItemFromPayment chiamata con index:', selectedIndex);
       const removed = selectedSplitItems.splice(selectedIndex, 1)[0];
+      console.log('Rimuovo articolo da destra:', removed.name);
 
       // Ricrea la card nella colonna sinistra
       const leftContainer = document.getElementById('splitItemsLeft');

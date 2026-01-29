@@ -1335,9 +1335,13 @@ if __name__ == "__main__":
             logging.info(f"✓ Rimozioni attive: {rim_count}")
     
     logging.info("="*60)
+    # Porta configurabile da variabile d'ambiente (default: 5000)
+    port = int(os.environ.get('FLASK_PORT', 5000))
+
     logging.info("🌅 SUNSET BAR - Server in ascolto")
-    logging.info(f"🌐 URL: http://0.0.0.0:4000")
+    logging.info(f"🌐 URL: http://0.0.0.0:{port}")
     logging.info(f"💾 Database: {DB_FILE}")
+    logging.info(f"🔧 Modalità: {'TEST (porta 44321)' if port == 44321 else 'PRODUZIONE (porta 5000)'}")
     logging.info("="*60)
-    
-    app.run(host="0.0.0.0", port=5000, threaded=True, debug=False)
+
+    app.run(host="0.0.0.0", port=port, threaded=True, debug=False)

@@ -19,6 +19,7 @@ os.makedirs(LOG_DIR, exist_ok=True)
 
 # Leggi da environment o usa default
 PRINTER_NAME = os.environ.get('PRINTER_NAME', 'bancone')
+JOB_TYPE = os.environ.get('JOB_TYPE', 'new_order')  # 'new_order' o 'add_items'
 
 # Configurazione stampanti - IP CORRETTI PER RETE 0.x
 if PRINTER_NAME == 'cucina':
@@ -250,9 +251,60 @@ def raw_print(tavolo: str, testo: str) -> bool:
     try:
         logging.info(f"=== INIZIO STAMPA ===")
         logging.info(f"Stampante: {PRINTER_NAME}")
+        logging.info(f"Tipo job: {JOB_TYPE}")
         logging.info(f"Connessione: {PRINTER_IP}:{PRINTER_PORT}")
         logging.info(f"Tavolo: {tavolo}")
-        
+
+        # ========== STAMPA SEMPLIFICATA PER AGGIUNTE ==========
+        if JOB_TYPE == 'add_items':
+            logging.info("=== STAMPA AGGIUNTA ARTICOLI (SEMPLIFICATA) ===")
+
+            p = Network(PRINTER_IP, PRINTER_PORT, timeout=10)
+            p.hw('init')
+            logging.info("Connessione stabilita")
+
+            # Header semplice: TAVOLO + AGGIUNTA
+            if PRINTER_NAME == 'cucina':
+                title_text = f"TAVOLO {tavolo}\n+ AGGIUNTA CUCINA +"
+            else:
+                title_text = f"TAVOLO {tavolo}\n+ AGGIUNTA +"
+
+            img = _make_img(title_text, TITLE_PTS)
+            buf = io.BytesIO()
+            img.save(buf, format="PNG")
+            buf.seek(0)
+            p.image(buf)
+            p.text("\n")
+
+            # Orario
+            timestamp = datetime.now().strftime("%d/%m/%Y %H:%M")
+            img = _make_img(timestamp, BODY_PTS // 2)
+            buf = io.BytesIO()
+            img.save(buf, format="PNG")
+            buf.seek(0)
+            p.image(buf)
+            p.text("\n\n")
+
+            # Items aggiunti
+            for line in testo.splitlines():
+                if line.strip():
+                    for part in textwrap.wrap(line, 32) or [""]:
+                        img = _make_img(part, BODY_PTS)
+                        buf = io.BytesIO()
+                        img.save(buf, format="PNG")
+                        buf.seek(0)
+                        p.image(buf)
+                    p.text("\n")
+
+            # Fine
+            p.text("\n\n\n")
+            p.cut(feed=True)
+            p.close()
+
+            logging.info(f"✓ Stampa aggiunta completata")
+            return True
+
+        # ========== STAMPA COMPLETA PER NUOVO ORDINE ==========
         # Categorizza gli items
         bevande, cucina, altro = categorizza_items(testo)
         

@@ -356,10 +356,12 @@ def _printer_worker():
         tavolo = job['tavolo']
         testo = job['testo']
         printer_name = job['printer']
-        
+        job_type = job.get('job_type', 'new_order')  # Default: ordine nuovo
+
         try:
             env = os.environ.copy()
             env['PRINTER_NAME'] = printer_name
+            env['JOB_TYPE'] = job_type  # Passa il tipo di job
             env['PYTHONPATH'] = BASE_DIR
             
             result = subprocess.run(
@@ -383,9 +385,16 @@ def _printer_worker():
 
 threading.Thread(target=_printer_worker, daemon=True).start()
 
-def enqueue_print(tavolo: str, testo: str, printer: str = 'bar'):
-    logging.info(f"📝 In coda stampa {printer} - Tavolo {tavolo}")
-    PRINT_QUEUE.put({'tavolo': tavolo, 'testo': testo, 'printer': printer})
+def enqueue_print(tavolo: str, testo: str, printer: str = 'bar', job_type: str = 'new_order'):
+    """
+    Accoda una stampa
+
+    job_type può essere:
+    - 'new_order': nuovo ordine completo (stampa completa)
+    - 'add_items': aggiunta articoli (stampa semplificata)
+    """
+    logging.info(f"📝 In coda stampa {printer} - Tavolo {tavolo} - Tipo: {job_type}")
+    PRINT_QUEUE.put({'tavolo': tavolo, 'testo': testo, 'printer': printer, 'job_type': job_type})
 
 def schedule_cleanup():
     while True:
@@ -831,13 +840,13 @@ def add_items_to_order(oid):
             if destinazione in ['bancone', 'entrambi']:
                 bancone_items.append(line)
 
-        # Stampa SOLO nuovi articoli in cucina
+        # Stampa SOLO nuovi articoli in cucina (con flag "aggiunta")
         if cucina_items:
-            enqueue_print(o.tavolo, '\n'.join(cucina_items), 'cucina')
+            enqueue_print(o.tavolo, '\n'.join(cucina_items), 'cucina', job_type='add_items')
 
-        # Stampa SOLO nuovi articoli al bancone
+        # Stampa SOLO nuovi articoli al bancone (con flag "aggiunta")
         if bancone_items:
-            enqueue_print(o.tavolo, '\n'.join(bancone_items), 'bar')
+            enqueue_print(o.tavolo, '\n'.join(bancone_items), 'bar', job_type='add_items')
 
         logging.info(f"✓ Aggiunti {len(new_items)} articoli all'ordine {oid} - Tavolo {o.tavolo} (Cucina: {len(cucina_items)}, Bancone: {len(bancone_items)})")
 

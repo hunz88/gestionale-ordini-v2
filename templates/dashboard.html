@@ -1,0 +1,235 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Alkemy Print Hub{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">
+            <i class="bi bi-speedometer2 text-alkemy-orange"></i>
+            Dashboard
+        </h1>
+    </div>
+</div>
+
+<!-- Stats Cards -->
+<div class="row g-3 mb-4">
+    <!-- Active Projects -->
+    <div class="col-md-3">
+        <div class="card bg-alkemy-card h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-1">Progetti Attivi</h6>
+                        <h2 class="mb-0">{{ active_projects|length }}</h2>
+                    </div>
+                    <div class="stat-icon bg-alkemy-orange">
+                        <i class="bi bi-printer-fill"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Monthly Earnings -->
+    <div class="col-md-3">
+        <div class="card bg-alkemy-card h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-1">Guadagni Mensili</h6>
+                        <h2 class="mb-0">€ {{ "%.2f"|format(monthly_earnings) }}</h2>
+                    </div>
+                    <div class="stat-icon bg-success">
+                        <i class="bi bi-cash-coin"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Projects This Month -->
+    <div class="col-md-3">
+        <div class="card bg-alkemy-card h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-1">Progetti Questo Mese</h6>
+                        <h2 class="mb-0">{{ projects_this_month }}</h2>
+                    </div>
+                    <div class="stat-icon bg-info">
+                        <i class="bi bi-bar-chart-fill"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Low Stock Materials -->
+    <div class="col-md-3">
+        <div class="card bg-alkemy-card h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-1">Materiali Scarsi</h6>
+                        <h2 class="mb-0">{{ low_stock_materials|length }}</h2>
+                    </div>
+                    <div class="stat-icon bg-danger">
+                        <i class="bi bi-exclamation-triangle-fill"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card bg-alkemy-card">
+            <div class="card-body">
+                <h5 class="card-title mb-3">Azioni Rapide</h5>
+                <div class="d-flex gap-2 flex-wrap">
+                    <a href="{{ url_for('new_project') }}" class="btn btn-alkemy-orange btn-lg">
+                        <i class="bi bi-plus-circle"></i> Nuovo Progetto
+                    </a>
+                    <a href="{{ url_for('quick_quote') }}" class="btn btn-outline-light btn-lg">
+                        <i class="bi bi-lightning-fill"></i> Preventivo Rapido
+                    </a>
+                    <a href="{{ url_for('materials') }}" class="btn btn-outline-light btn-lg">
+                        <i class="bi bi-box-seam"></i> Gestisci Materiali
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Active Projects List -->
+    <div class="col-lg-8 mb-4">
+        <div class="card bg-alkemy-card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-list-task"></i> Progetti Attivi</h5>
+            </div>
+            <div class="card-body">
+                {% if active_projects %}
+                <div class="list-group list-group-flush">
+                    {% for project in active_projects %}
+                    <a href="{{ url_for('project_detail', project_id=project.id) }}" class="list-group-item list-group-item-action bg-dark border-secondary">
+                        <div class="d-flex w-100 justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1">{{ project.title }}</h6>
+                                <p class="mb-1 text-muted small">
+                                    <i class="bi bi-person"></i> {{ project.customer_name or 'N/D' }}
+                                    <span class="ms-2">
+                                        <i class="bi bi-printer"></i>
+                                        {% if project.printer_type == '3d_bambu' %}Bambu P1S
+                                        {% elif project.printer_type == '3d_flashforge' %}Flashforge M5
+                                        {% else %}xTool M1{% endif %}
+                                    </span>
+                                </p>
+                            </div>
+                            <div class="text-end">
+                                <span class="badge
+                                    {% if project.status == 'quote' %}bg-secondary
+                                    {% elif project.status == 'designing' %}bg-info
+                                    {% elif project.status == 'printing' %}bg-warning
+                                    {% endif %}">
+                                    {{ project.status.upper() }}
+                                </span>
+                                <div class="text-muted small mt-1">€ {{ "%.2f"|format(project.final_price) }}</div>
+                            </div>
+                        </div>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted text-center py-4">Nessun progetto attivo al momento.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Materials & Stats -->
+    <div class="col-lg-4">
+        <!-- Low Stock Materials -->
+        {% if low_stock_materials %}
+        <div class="card bg-alkemy-card mb-4">
+            <div class="card-header bg-danger">
+                <h6 class="mb-0"><i class="bi bi-exclamation-triangle"></i> Materiali in Esaurimento</h6>
+            </div>
+            <div class="card-body">
+                <div class="list-group list-group-flush">
+                    {% for material in low_stock_materials %}
+                    <div class="list-group-item bg-dark border-secondary">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>{{ material.name }}</strong>
+                                <div class="progress mt-1" style="height: 8px; width: 150px;">
+                                    <div class="progress-bar bg-{{ material.stock_status() }}"
+                                         style="width: {{ material.stock_percentage() }}%">
+                                    </div>
+                                </div>
+                            </div>
+                            <span class="badge bg-{{ material.stock_status() }}">
+                                {{ "%.0f"|format(material.stock_percentage()) }}%
+                            </span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Stats Chart -->
+        <div class="card bg-alkemy-card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="bi bi-pie-chart"></i> Progetti per Stato</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="statusChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Status Chart
+const statusCtx = document.getElementById('statusChart');
+if (statusCtx) {
+    const statusData = {{ status_counts|tojson }};
+    new Chart(statusCtx, {
+        type: 'doughnut',
+        data: {
+            labels: Object.keys(statusData),
+            datasets: [{
+                data: Object.values(statusData),
+                backgroundColor: [
+                    '#6c757d',  // quote - gray
+                    '#0dcaf0',  // designing - info
+                    '#ffc107',  // printing - warning
+                    '#198754',  // completed - success
+                    '#dc3545'   // failed - danger
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        color: '#fff'
+                    }
+                }
+            }
+        }
+    });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,221 @@
+{% extends "base.html" %}
+
+{% block title %}Quick Quote - Alkemy Print Hub{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">
+            <i class="bi bi-lightning-fill text-alkemy-orange"></i>
+            Preventivo Rapido
+        </h1>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8 mx-auto">
+        <!-- Voice Input Card -->
+        <div class="card bg-alkemy-card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-mic-fill"></i> Richiesta Cliente (Voice o Manuale)
+                </h5>
+            </div>
+            <div class="card-body text-center">
+                <button id="recordQuoteBtn" class="btn btn-alkemy-orange btn-lg mb-3" type="button">
+                    <i class="bi bi-mic-fill"></i>
+                    <span id="recordQuoteBtnText">REGISTRA RICHIESTA CLIENTE</span>
+                </button>
+                <div id="quoteRecordingStatus" class="text-muted mb-2" style="display:none;">
+                    <i class="bi bi-record-circle text-danger"></i>
+                    Registrazione in corso...
+                </div>
+                <div id="quoteTranscriptionResult" class="alert alert-info" style="display:none;">
+                    <strong>Trascrizione:</strong>
+                    <p id="quoteTranscriptionText" class="mb-0"></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quote Form -->
+        <form method="POST" id="quoteForm">
+            <div class="card bg-alkemy-card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-file-text"></i> Dettagli Preventivo
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <input type="hidden" name="voice_request" id="hiddenVoiceRequest">
+
+                    <div class="mb-3">
+                        <label class="form-label">Nome Cliente *</label>
+                        <input type="text" class="form-control" name="customer_name" id="quoteCustomerName" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Descrizione Lavoro *</label>
+                        <textarea class="form-control" name="description" id="quoteDescription" rows="4" required></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Prezzo Stimato (€) *</label>
+                        <input type="number" class="form-control" name="estimated_price" id="quoteEstimatedPrice" step="0.01" required>
+                        <small class="text-muted">Calcola considerando materiali + lavoro + margine</small>
+                    </div>
+
+                    <div class="alert alert-success" id="quotePriceBreakdown" style="display:none;">
+                        <strong>Breakdown Suggerito:</strong><br>
+                        <span id="breakdownDetails"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="card bg-alkemy-card mb-4">
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-alkemy-orange btn-lg">
+                            <i class="bi bi-file-earmark-pdf"></i> Genera PDF Preventivo
+                        </button>
+                        <button type="button" class="btn btn-outline-light" id="convertToProjectBtn">
+                            <i class="bi bi-arrow-right-circle"></i> Converti in Progetto
+                        </button>
+                        <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-circle"></i> Annulla
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </form>
+
+        <!-- Recent Quotes -->
+        <div class="card bg-alkemy-card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-clock-history"></i> Preventivi Recenti</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">I preventivi salvati appariranno qui.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Voice recording for quote
+let quoteRecorder = null;
+
+document.getElementById('recordQuoteBtn').addEventListener('click', async () => {
+    if (!quoteRecorder) {
+        await startQuoteRecording();
+    } else {
+        await stopQuoteRecording();
+    }
+});
+
+async function startQuoteRecording() {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    quoteRecorder = RecordRTC(stream, {
+        type: 'audio',
+        mimeType: 'audio/webm'
+    });
+
+    quoteRecorder.startRecording();
+
+    document.getElementById('recordQuoteBtn').classList.remove('btn-alkemy-orange');
+    document.getElementById('recordQuoteBtn').classList.add('btn-danger');
+    document.getElementById('recordQuoteBtnText').textContent = 'FERMA REGISTRAZIONE';
+    document.getElementById('quoteRecordingStatus').style.display = 'block';
+}
+
+async function stopQuoteRecording() {
+    quoteRecorder.stopRecording(async () => {
+        const blob = quoteRecorder.getBlob();
+        quoteRecorder.stream.getTracks().forEach(track => track.stop());
+        quoteRecorder = null;
+
+        document.getElementById('recordQuoteBtn').classList.remove('btn-danger');
+        document.getElementById('recordQuoteBtn').classList.add('btn-alkemy-orange');
+        document.getElementById('recordQuoteBtnText').textContent = 'REGISTRA RICHIESTA CLIENTE';
+        document.getElementById('quoteRecordingStatus').style.display = 'none';
+
+        // Transcribe
+        await transcribeQuote(blob);
+    });
+}
+
+async function transcribeQuote(blob) {
+    const formData = new FormData();
+    formData.append('audio', blob, 'quote.webm');
+    formData.append('context', 'quote');
+
+    try {
+        document.getElementById('quoteTranscriptionText').innerHTML = '<i class="bi bi-hourglass-split"></i> Trascrizione in corso...';
+        document.getElementById('quoteTranscriptionResult').style.display = 'block';
+
+        const response = await fetch('/api/transcribe', {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            document.getElementById('quoteTranscriptionText').textContent = data.transcription;
+            document.getElementById('hiddenVoiceRequest').value = data.transcription;
+
+            // Auto-fill form
+            if (data.parsed_info) {
+                if (data.parsed_info.customer_name) {
+                    document.getElementById('quoteCustomerName').value = data.parsed_info.customer_name;
+                }
+                if (data.parsed_info.description) {
+                    document.getElementById('quoteDescription').value = data.parsed_info.description;
+                }
+                if (data.parsed_info.estimated_price) {
+                    document.getElementById('quoteEstimatedPrice').value = data.parsed_info.estimated_price;
+                }
+            }
+        } else {
+            document.getElementById('quoteTranscriptionText').textContent = 'Errore: ' + data.error;
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        document.getElementById('quoteTranscriptionText').textContent = 'Errore nella trascrizione.';
+    }
+}
+
+// Price breakdown calculator
+document.getElementById('quoteEstimatedPrice').addEventListener('input', function() {
+    const price = parseFloat(this.value) || 0;
+    if (price > 0) {
+        const materials = (price * 0.3).toFixed(2);
+        const labor = (price * 0.5).toFixed(2);
+        const margin = (price * 0.2).toFixed(2);
+
+        document.getElementById('breakdownDetails').innerHTML = `
+            Materiali (~30%): € ${materials}<br>
+            Lavoro (~50%): € ${labor}<br>
+            Margine (~20%): € ${margin}
+        `;
+        document.getElementById('quotePriceBreakdown').style.display = 'block';
+    } else {
+        document.getElementById('quotePriceBreakdown').style.display = 'none';
+    }
+});
+
+// Convert to project
+document.getElementById('convertToProjectBtn').addEventListener('click', function() {
+    // Store quote data in localStorage and redirect to new project
+    const quoteData = {
+        customer_name: document.getElementById('quoteCustomerName').value,
+        description: document.getElementById('quoteDescription').value,
+        estimated_price: document.getElementById('quoteEstimatedPrice').value
+    };
+    localStorage.setItem('quoteToProject', JSON.stringify(quoteData));
+    window.location.href = '{{ url_for("new_project") }}';
+});
+</script>
+{% endblock %}

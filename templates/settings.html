@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+
+{% block title %}Impostazioni - Alkemy Print Hub{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">
+            <i class="bi bi-gear-fill text-alkemy-orange"></i>
+            Impostazioni
+        </h1>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8 mx-auto">
+        <!-- Business Settings -->
+        <div class="card bg-alkemy-card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-currency-euro"></i> Tariffe Business</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label class="form-label">Tariffa Oraria Lavoro (€/h)</label>
+                        <input type="number" class="form-control" name="hourly_labor_rate"
+                               value="{{ hourly_rate }}" step="0.01" required>
+                        <small class="text-muted">Costo orario per il lavoro di stampa e preparazione</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Margine Default (%)</label>
+                        <input type="number" class="form-control" name="default_margin_percentage"
+                               value="{{ margin }}" step="0.1" required>
+                        <small class="text-muted">Percentuale di margine applicata sui costi</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Modalità Scura</label>
+                        <select class="form-select" name="dark_mode">
+                            <option value="true" {% if dark_mode == 'true' %}selected{% endif %}>Attiva</option>
+                            <option value="false" {% if dark_mode == 'false' %}selected{% endif %}>Disattiva</option>
+                        </select>
+                    </div>
+
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-alkemy-orange">
+                            <i class="bi bi-check-circle"></i> Salva Impostazioni
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- API Configuration -->
+        <div class="card bg-alkemy-card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-key-fill"></i> API Keys</h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                    <strong>Configurazione API</strong><br>
+                    Le chiavi API vengono configurate nel file <code>.env</code> nella directory principale.
+                    Non modificare le chiavi API tramite l'interfaccia web per motivi di sicurezza.
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">OpenAI Whisper API</label>
+                    <input type="password" class="form-control" value="••••••••••••" disabled>
+                    <small class="text-muted">
+                        Status:
+                        <span class="badge bg-success"><i class="bi bi-check-circle"></i> Configurata</span>
+                    </small>
+                </div>
+
+                <p class="text-muted small">
+                    Per configurare o modificare le API keys, edita il file <code>.env</code> e riavvia l'applicazione.
+                </p>
+            </div>
+        </div>
+
+        <!-- Printer Configuration -->
+        <div class="card bg-alkemy-card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-printer-fill"></i> Stampanti Attive</h5>
+            </div>
+            <div class="card-body">
+                <div class="list-group list-group-flush">
+                    <div class="list-group-item bg-dark d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>Bambu Lab P1S</strong>
+                            <br><small class="text-muted">Stampante 3D FDM</small>
+                        </div>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" checked>
+                        </div>
+                    </div>
+                    <div class="list-group-item bg-dark d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>Flashforge M5</strong>
+                            <br><small class="text-muted">Stampante 3D FDM</small>
+                        </div>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" checked>
+                        </div>
+                    </div>
+                    <div class="list-group-item bg-dark d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>xTool M1 Ultra</strong>
+                            <br><small class="text-muted">Laser Cutter/Engraver</small>
+                        </div>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" checked>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Database Backup -->
+        <div class="card bg-alkemy-card mb-4">
+            <div class="card-header bg-danger">
+                <h5 class="mb-0"><i class="bi bi-database"></i> Database & Backup</h5>
+            </div>
+            <div class="card-body">
+                <p>Scarica una copia del database per backup o trasferimento.</p>
+
+                <div class="d-grid gap-2">
+                    <a href="/static/uploads/backup/printshub.db" class="btn btn-outline-light" download>
+                        <i class="bi bi-download"></i> Scarica Database Backup
+                    </a>
+                    <button class="btn btn-outline-danger" disabled>
+                        <i class="bi bi-arrow-clockwise"></i> Ripristina Database (Coming Soon)
+                    </button>
+                </div>
+
+                <div class="alert alert-info mt-3 mb-0">
+                    <small>
+                        <i class="bi bi-info-circle"></i>
+                        Ultima modifica database: {{ now().strftime('%d/%m/%Y %H:%M') }}
+                    </small>
+                </div>
+            </div>
+        </div>
+
+        <!-- System Info -->
+        <div class="card bg-alkemy-card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-info-circle"></i> Info Sistema</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-dark table-sm mb-0">
+                    <tr>
+                        <td>Versione Alkemy Print Hub:</td>
+                        <td class="text-end">1.0.0</td>
+                    </tr>
+                    <tr>
+                        <td>Flask Version:</td>
+                        <td class="text-end">3.1.1</td>
+                    </tr>
+                    <tr>
+                        <td>Database:</td>
+                        <td class="text-end">SQLite</td>
+                    </tr>
+                    <tr>
+                        <td>Porta Server:</td>
+                        <td class="text-end">5321</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

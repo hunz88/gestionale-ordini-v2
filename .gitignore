@@ -1,6 +1,7 @@
 # Python
 __pycache__/
 *.pyc
+*.py[cod]
 venv/
 .venv/
 
@@ -9,6 +10,18 @@ venv/
 *.backup
 backups/
 file backup funzionante/
+data/*.db
+data/*.db-journal
+
+# Environment variables
+.env
+.env.local
+
+# Uploads (Alkemy Print Hub)
+static/uploads/audio/*
+static/uploads/photos/*
+static/uploads/quotes/*
+!static/uploads/.gitkeep
 
 # Log
 logs/
@@ -17,3 +30,13 @@ logs/
 # Cartelle di sistema
 .DS_Store
 Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/

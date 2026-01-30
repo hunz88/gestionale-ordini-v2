@@ -4,27 +4,22 @@ Guida rapida per installare e avviare Alkemy Print Hub sul tuo Raspberry Pi 5.
 
 ---
 
-## 📥 STEP 1: Scarica l'Applicazione da GitHub
+## 📥 STEP 1: Scarica l'Applicazione
 
 Sul tuo **Raspberry Pi 5**, apri il terminale e esegui:
 
 ```bash
-# Se hai già clonato il repo, vai nella cartella e scarica il branch
-cd ~/gestionale-ordini-v2
-git fetch origin
-git checkout claude/alkemy-print-hub-EJ14C
-git pull origin claude/alkemy-print-hub-EJ14C
-```
-
-**OPPURE** se NON hai ancora il repo:
-
-```bash
-# Clona il repository
+# Vai nella home directory
 cd ~
-git clone https://github.com/hunz88/gestionale-ordini-v2.git
-cd gestionale-ordini-v2
-git checkout claude/alkemy-print-hub-EJ14C
+
+# Clona/scarica il progetto
+git clone https://github.com/hunz88/alkemy-print-hub.git
+
+# Entra nella cartella
+cd alkemy-print-hub
 ```
+
+> **Nota:** Se il repository non è ancora pubblico, scarica i file dalla directory locale `/home/user/alkemy-print-hub`
 
 ---
 
@@ -132,6 +127,7 @@ Puoi **modificarli o eliminarli** dal menu Materiali e Dashboard.
 
 ### **Avviare il server:**
 ```bash
+cd ~/alkemy-print-hub
 ./start.sh
 ```
 
@@ -170,8 +166,8 @@ Per far partire l'app **automaticamente** all'avvio del Raspberry Pi:
    [Service]
    Type=simple
    User=pi
-   WorkingDirectory=/home/pi/gestionale-ordini-v2
-   ExecStart=/home/pi/gestionale-ordini-v2/venv/bin/python /home/pi/gestionale-ordini-v2/app.py
+   WorkingDirectory=/home/pi/alkemy-print-hub
+   ExecStart=/home/pi/alkemy-print-hub/venv/bin/python /home/pi/alkemy-print-hub/app.py
    Restart=always
    RestartSec=10
 
@@ -226,7 +222,7 @@ docker-compose down
 
 ## ✅ Checklist Veloce
 
-- [ ] Scaricato il branch `claude/alkemy-print-hub-EJ14C`
+- [ ] Scaricato il progetto `alkemy-print-hub`
 - [ ] Eseguito `./start.sh`
 - [ ] Configurato `.env` con API key OpenAI (opzionale)
 - [ ] Aperto http://localhost:5321 nel browser
@@ -278,7 +274,7 @@ mkdir -p data
 
 Per assistenza completa, consulta il **README.md** principale.
 
-**Repository:** https://github.com/hunz88/gestionale-ordini-v2/tree/claude/alkemy-print-hub-EJ14C
+**Progetto:** Alkemy Print Hub - Sistema Gestionale Stampanti 3D/Laser
 
 ---
 
@@ -294,4 +290,4 @@ Il tuo **Alkemy Print Hub** è ora attivo e funzionante!
 
 **Versione:** 1.0.0
 **Data:** 30 Gennaio 2026
-**Branch:** claude/alkemy-print-hub-EJ14C
+**Sistema:** Raspberry Pi 5 - Python 3 + Flask

@@ -109,19 +109,25 @@
                 </div>
             </div>
 
-            <!-- Step 3: Photos -->
+            <!-- Step 3: Files Upload - TUTTI I TIPI -->
             <div class="card bg-alkemy-card mb-4">
                 <div class="card-header">
                     <h5 class="mb-0">
-                        <i class="bi bi-images"></i> Step 3: Foto Progetto (Opzionale)
+                        <i class="bi bi-files"></i> Step 3: Carica File Progetto (Opzionale)
                     </h5>
                 </div>
                 <div class="card-body">
                     <div class="mb-3">
-                        <label class="form-label">Carica fino a 5 foto</label>
-                        <input type="file" class="form-control" name="photo_0" accept="image/*" multiple>
+                        <label class="form-label">
+                            📎 Carica TUTTI i file necessari
+                            <small class="text-muted d-block mt-1">
+                                Foto, PDF, CAD (STL/OBJ/DXF/G-code), Office (Excel/Word), ZIP - NESSUN LIMITE!
+                            </small>
+                        </label>
+                        <input type="file" class="form-control" name="project_files" id="projectFiles" multiple
+                               accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.csv,.stl,.obj,.step,.stp,.dxf,.dwg,.gcode,.svg,.zip,.rar,.txt">
                     </div>
-                    <div id="photoPreview" class="row g-2"></div>
+                    <div id="filesList" class="mt-3"></div>
                 </div>
             </div>
 
@@ -325,5 +331,37 @@ document.getElementById('materialId').addEventListener('change', updateCostPrevi
 
 // Initialize
 updateCostPreview();
+
+// File upload preview
+document.getElementById('projectFiles').addEventListener('change', function(e) {
+    const filesList = document.getElementById('filesList');
+    filesList.innerHTML = '';
+
+    if (this.files.length > 0) {
+        filesList.innerHTML = '<h6 class="mb-3"><i class="bi bi-paperclip"></i> File selezionati (' + this.files.length + '):</h6><ul class="list-group">';
+        for (let file of this.files) {
+            const size = (file.size / 1024 / 1024).toFixed(2);
+            const icon = getFileIcon(file.name);
+            filesList.innerHTML += `
+                <li class="list-group-item bg-dark d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-${icon}"></i> ${file.name}</span>
+                    <span class="badge bg-secondary">${size} MB</span>
+                </li>`;
+        }
+        filesList.innerHTML += '</ul>';
+    }
+});
+
+function getFileIcon(filename) {
+    const ext = filename.split('.').pop().toLowerCase();
+    const icons = {
+        'pdf': 'file-pdf', 'doc': 'file-word', 'docx': 'file-word',
+        'xls': 'file-excel', 'xlsx': 'file-excel', 'csv': 'file-excel',
+        'zip': 'file-zip', 'rar': 'file-zip', '7z': 'file-zip',
+        'jpg': 'file-image', 'jpeg': 'file-image', 'png': 'file-image', 'gif': 'file-image',
+        'stl': 'box', 'obj': 'box', 'gcode': 'code-square', 'dxf': 'vector-pen', 'svg': 'vector-pen'
+    };
+    return icons[ext] || 'file-earmark';
+}
 </script>
 {% endblock %}

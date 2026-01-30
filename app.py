@@ -414,6 +414,89 @@ def history():
                          total_projects=total_projects)
 
 
+@app.route('/search')
+def search():
+    """Global search"""
+    query = request.args.get('q', '').strip()
+    search_type = request.args.get('type', '')
+    status_filter = request.args.get('status', '')
+    printer_filter = request.args.get('printer', '')
+
+    results = []
+
+    if query:
+        # Search projects
+        if not search_type or search_type == 'projects':
+            projects = Project.query.filter(
+                db.or_(
+                    Project.title.ilike(f'%{query}%'),
+                    Project.customer_name.ilike(f'%{query}%'),
+                    Project.voice_transcription.ilike(f'%{query}%')
+                )
+            )
+
+            if status_filter:
+                projects = projects.filter(Project.status == status_filter)
+            if printer_filter:
+                projects = projects.filter(Project.printer_type == printer_filter)
+
+            for project in projects.all():
+                results.append({
+                    'type': 'project',
+                    'id': project.id,
+                    'title': project.title,
+                    'customer_name': project.customer_name,
+                    'printer_type': project.printer_type,
+                    'status': project.status,
+                    'final_price': project.final_price,
+                    'voice_transcription': project.voice_transcription,
+                    'created_at': project.created_at
+                })
+
+        # Search materials
+        if not search_type or search_type == 'materials':
+            materials = Material.query.filter(
+                db.or_(
+                    Material.name.ilike(f'%{query}%'),
+                    Material.color.ilike(f'%{query}%'),
+                    Material.voice_notes.ilike(f'%{query}%')
+                )
+            ).all()
+
+            for material in materials:
+                results.append({
+                    'type': 'material',
+                    'name': material.name,
+                    'type': material.type,
+                    'color': material.color,
+                    'current_stock_kg': material.current_stock_kg,
+                    'stock_percentage': material.stock_percentage
+                })
+
+        # Search quotes
+        if not search_type or search_type == 'quotes':
+            quotes = Quote.query.filter(
+                db.or_(
+                    Quote.customer_name.ilike(f'%{query}%'),
+                    Quote.description.ilike(f'%{query}%'),
+                    Quote.voice_request.ilike(f'%{query}%')
+                )
+            ).all()
+
+            for quote in quotes:
+                results.append({
+                    'type': 'quote',
+                    'id': quote.id,
+                    'customer_name': quote.customer_name,
+                    'description': quote.description,
+                    'estimated_price': quote.estimated_price,
+                    'status': quote.status,
+                    'created_at': quote.created_at
+                })
+
+    return render_template('search.html', query=query, results=results)
+
+
 @app.route('/settings', methods=['GET', 'POST'])
 def settings():
     """Application settings"""

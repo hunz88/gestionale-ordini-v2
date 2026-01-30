@@ -26,15 +26,22 @@ class Config:
     UPLOAD_FOLDER = BASE_DIR / 'static' / 'uploads'
     AUDIO_FOLDER = UPLOAD_FOLDER / 'audio'
     PHOTOS_FOLDER = UPLOAD_FOLDER / 'photos'
-    MAX_CONTENT_LENGTH = 50 * 1024 * 1024  # 50MB max file size
+    FILES_FOLDER = UPLOAD_FOLDER / 'files'
+    MAX_CONTENT_LENGTH = 100 * 1024 * 1024  # 100MB max file size
 
     # Business settings (defaults)
     HOURLY_LABOR_RATE = float(os.getenv('HOURLY_LABOR_RATE', '15.0'))
     DEFAULT_MARGIN_PERCENTAGE = float(os.getenv('DEFAULT_MARGIN_PERCENTAGE', '30.0'))
 
-    # Allowed extensions
-    ALLOWED_AUDIO_EXTENSIONS = {'wav', 'mp3', 'webm', 'm4a', 'ogg'}
-    ALLOWED_IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+    # Allowed extensions - TUTTI I TIPI DI FILE
+    ALLOWED_AUDIO_EXTENSIONS = {'wav', 'mp3', 'webm', 'm4a', 'ogg', 'aac', 'flac'}
+    ALLOWED_IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'tiff', 'svg'}
+    ALLOWED_DOCUMENT_EXTENSIONS = {'pdf', 'doc', 'docx', 'xls', 'xlsx', 'csv', 'txt', 'odt', 'ods', 'rtf'}
+    ALLOWED_CAD_EXTENSIONS = {'stl', 'obj', 'step', 'stp', 'iges', 'igs', 'dxf', 'dwg', 'svg', 'ai', 'gcode', '3mf', 'amf'}
+    ALLOWED_ARCHIVE_EXTENSIONS = {'zip', 'rar', '7z', 'tar', 'gz', 'bz2'}
+    ALL_ALLOWED_EXTENSIONS = (ALLOWED_AUDIO_EXTENSIONS | ALLOWED_IMAGE_EXTENSIONS |
+                             ALLOWED_DOCUMENT_EXTENSIONS | ALLOWED_CAD_EXTENSIONS |
+                             ALLOWED_ARCHIVE_EXTENSIONS)
 
     # Server
     FLASK_PORT = int(os.getenv('FLASK_PORT', '5321'))
@@ -46,4 +53,5 @@ class Config:
         # Create necessary directories
         Config.AUDIO_FOLDER.mkdir(parents=True, exist_ok=True)
         Config.PHOTOS_FOLDER.mkdir(parents=True, exist_ok=True)
+        Config.FILES_FOLDER.mkdir(parents=True, exist_ok=True)
         (Config.BASE_DIR / 'data').mkdir(parents=True, exist_ok=True)

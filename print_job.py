@@ -305,39 +305,32 @@ def raw_print(tavolo: str, testo: str) -> bool:
             return True
 
         # ========== STAMPA COMPLETA PER NUOVO ORDINE ==========
-        # Categorizza gli items
-        bevande, cucina, altro = categorizza_items(testo)
-        
-        logging.info(f"Bevande trovate: {len(bevande)}")
-        logging.info(f"Piatti cucina trovati: {len(cucina)}")
-        logging.info(f"Altri items: {len(altro)}")
-        
-        # Log dettagliato per debug
-        if bevande:
-            logging.info(f"Bevande: {', '.join(bevande[:3])}...")
-        if cucina:
-            logging.info(f"Cucina: {', '.join(cucina[:3])}...")
-        if altro:
-            logging.info(f"Altro: {', '.join(altro[:3])}...")
-        
+
         # Connessione
         p = Network(PRINTER_IP, PRINTER_PORT, timeout=10)
         p.hw('init')  # reset
         logging.info("Connessione stabilita")
-        
+
         if PRINTER_NAME == 'cucina':
-            # ====== CUCINA: SOLO PIATTI CALDI ======
-            tutti_piatti = cucina + altro  # Altro va in cucina per sicurezza
-            
+            # ====== CUCINA: STAMPA TUTTO ======
+            # IMPORTANTE: Se il server invia a 'cucina', ha già deciso cosa stampare
+            # NON ri-categorizziamo qui, stampiamo TUTTO quello che riceviamo!
+
+            logging.info("=== STAMPA CUCINA ===")
+            logging.info(f"Ricevuto testo: {testo[:100]}...")
+
+            # Converti il testo in lista di righe
+            tutti_piatti = [line.strip() for line in testo.splitlines() if line.strip()]
+
             if tutti_piatti:
                 stampa_sezione(p, "*** CUCINA ***", tutti_piatti, tavolo, show_footer=False)
                 p.text("\n\n\n")
                 p.cut(feed=True)
-                logging.info(f"✓ Stampa cucina completata: {len(tutti_piatti)} articoli")
+                logging.info(f"✓ Stampa cucina completata: {len(tutti_piatti)} righe")
             else:
-                logging.info("Nessun piatto per la cucina")
+                logging.warning("⚠️ Testo vuoto ricevuto per cucina")
                 # Stampa comunque un avviso
-                img = _make_img(f"TAVOLO {tavolo}\nNESSUN PIATTO DA CUCINARE", BODY_PTS)
+                img = _make_img(f"TAVOLO {tavolo}\n⚠️ ORDINE VUOTO", BODY_PTS)
                 buf = io.BytesIO()
                 img.save(buf, format="PNG")
                 buf.seek(0)
@@ -347,7 +340,14 @@ def raw_print(tavolo: str, testo: str) -> bool:
         
         else:
             # ====== BANCONE: TRE STAMPE ======
-            
+
+            # Categorizza gli items per il bancone (serve per stampa separata bevande)
+            bevande, cucina_items, altro = categorizza_items(testo)
+
+            logging.info(f"Bevande trovate: {len(bevande)}")
+            logging.info(f"Piatti cucina trovati: {len(cucina_items)}")
+            logging.info(f"Altri items: {len(altro)}")
+
             # 1. STAMPA COMPLETA PER IL CONTO
             logging.info("=== PRIMA STAMPA BANCONE: ORDINE COMPLETO ===")
             

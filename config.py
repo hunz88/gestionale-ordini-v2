@@ -44,7 +44,7 @@ class Config:
                              ALLOWED_ARCHIVE_EXTENSIONS)
 
     # Server
-    FLASK_PORT = int(os.getenv('FLASK_PORT', '5321'))
+    FLASK_PORT = int(os.getenv('FLASK_PORT', os.getenv('PORT', '5321')))
     FLASK_HOST = os.getenv('FLASK_HOST', '0.0.0.0')
 
     @staticmethod

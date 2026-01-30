@@ -696,34 +696,44 @@ def orders_new():
     if items:
         save_statistics(items, tavolo)
 
-    # Stampa cucina
+    # Stampa cucina E bancone - dividi in base a destinazione_stampa
     cucina_items = []
+    bancone_items = []
+
     if items:
         for item in items:
             voce = Voce.query.filter_by(id=item.get('id')).first()
             destinazione = 'cucina'
-            
+
             if voce and voce.destinazione_stampa:
                 destinazione = voce.destinazione_stampa
             elif item.get('gruppo', '') in CUCINA_GROUPS:
                 destinazione = 'cucina'
             else:
                 destinazione = 'bancone'
-            
+
             line = f"{item['qty']}× {item['nome']}"
             if item.get('note'):
                 line += f" ({item['note']})"
-            
+
+            # Aggiungi a cucina se destinazione = 'cucina' o 'entrambi'
             if destinazione in ['cucina', 'entrambi']:
                 cucina_items.append(line)
-    
+
+            # Aggiungi a bancone se destinazione = 'bancone' o 'entrambi'
+            if destinazione in ['bancone', 'entrambi']:
+                bancone_items.append(line)
+
+    # Stampa in cucina solo gli articoli destinati alla cucina
     if cucina_items:
         enqueue_print(tavolo, '\n'.join(cucina_items), 'cucina')
-    
-    # Stampa bar
-    total = calculate_total_from_text(comanda)
-    comanda_con_totale = add_total_to_order(comanda, total)
-    enqueue_print(tavolo, comanda_con_totale, 'bar')
+
+    # Stampa al bancone solo gli articoli destinati al bancone
+    if bancone_items:
+        total = calculate_total_from_text(comanda)
+        bancone_text = '\n'.join(bancone_items)
+        bancone_con_totale = add_total_to_order(bancone_text, total)
+        enqueue_print(tavolo, bancone_con_totale, 'bar')
 
     return jsonify(ok=True, id=rec.id)
 

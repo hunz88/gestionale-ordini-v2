@@ -14,29 +14,6 @@
 
 <div class="row">
     <div class="col-lg-8 mx-auto">
-        <!-- Voice Input Card -->
-        <div class="card bg-alkemy-card mb-4">
-            <div class="card-header">
-                <h5 class="mb-0">
-                    <i class="bi bi-mic-fill"></i> Richiesta Cliente (Voice o Manuale)
-                </h5>
-            </div>
-            <div class="card-body text-center">
-                <button id="recordQuoteBtn" class="btn btn-alkemy-orange btn-lg mb-3" type="button">
-                    <i class="bi bi-mic-fill"></i>
-                    <span id="recordQuoteBtnText">REGISTRA RICHIESTA CLIENTE</span>
-                </button>
-                <div id="quoteRecordingStatus" class="text-muted mb-2" style="display:none;">
-                    <i class="bi bi-record-circle text-danger"></i>
-                    Registrazione in corso...
-                </div>
-                <div id="quoteTranscriptionResult" class="alert alert-info" style="display:none;">
-                    <strong>Trascrizione:</strong>
-                    <p id="quoteTranscriptionText" class="mb-0"></p>
-                </div>
-            </div>
-        </div>
-
         <!-- Quote Form -->
         <form method="POST" id="quoteForm">
             <div class="card bg-alkemy-card mb-4">
@@ -46,8 +23,6 @@
                     </h5>
                 </div>
                 <div class="card-body">
-                    <input type="hidden" name="voice_request" id="hiddenVoiceRequest">
-
                     <div class="mb-3">
                         <label class="form-label">Nome Cliente *</label>
                         <input type="text" class="form-control" name="customer_name" id="quoteCustomerName" required>
@@ -95,7 +70,34 @@
                 <h5 class="mb-0"><i class="bi bi-clock-history"></i> Preventivi Recenti</h5>
             </div>
             <div class="card-body">
-                <p class="text-muted">I preventivi salvati appariranno qui.</p>
+                {% if recent_quotes %}
+                <div class="list-group list-group-flush">
+                    {% for quote in recent_quotes %}
+                    <div class="list-group-item bg-dark border-secondary">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-1">{{ quote.customer_name }}</h6>
+                                <small class="text-muted">
+                                    {{ quote.description[:50] }}{% if quote.description|length > 50 %}...{% endif %}
+                                </small><br>
+                                <small class="text-muted">
+                                    <i class="bi bi-calendar"></i> {{ quote.created_at.strftime('%d/%m/%Y %H:%M') }}
+                                </small>
+                            </div>
+                            <div class="text-end">
+                                <h5 class="mb-2 text-success">€ {{ "%.2f"|format(quote.estimated_price) }}</h5>
+                                <a href="{{ url_for('quote_detail', quote_id=quote.id) }}"
+                                   class="btn btn-sm btn-alkemy-orange">
+                                    <i class="bi bi-file-pdf"></i> Scarica PDF
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted mb-0">Nessun preventivo ancora. Creane uno sopra!</p>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -104,89 +106,6 @@
 
 {% block extra_scripts %}
 <script>
-// Voice recording for quote
-let quoteRecorder = null;
-
-document.getElementById('recordQuoteBtn').addEventListener('click', async () => {
-    if (!quoteRecorder) {
-        await startQuoteRecording();
-    } else {
-        await stopQuoteRecording();
-    }
-});
-
-async function startQuoteRecording() {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    quoteRecorder = RecordRTC(stream, {
-        type: 'audio',
-        mimeType: 'audio/webm'
-    });
-
-    quoteRecorder.startRecording();
-
-    document.getElementById('recordQuoteBtn').classList.remove('btn-alkemy-orange');
-    document.getElementById('recordQuoteBtn').classList.add('btn-danger');
-    document.getElementById('recordQuoteBtnText').textContent = 'FERMA REGISTRAZIONE';
-    document.getElementById('quoteRecordingStatus').style.display = 'block';
-}
-
-async function stopQuoteRecording() {
-    quoteRecorder.stopRecording(async () => {
-        const blob = quoteRecorder.getBlob();
-        quoteRecorder.stream.getTracks().forEach(track => track.stop());
-        quoteRecorder = null;
-
-        document.getElementById('recordQuoteBtn').classList.remove('btn-danger');
-        document.getElementById('recordQuoteBtn').classList.add('btn-alkemy-orange');
-        document.getElementById('recordQuoteBtnText').textContent = 'REGISTRA RICHIESTA CLIENTE';
-        document.getElementById('quoteRecordingStatus').style.display = 'none';
-
-        // Transcribe
-        await transcribeQuote(blob);
-    });
-}
-
-async function transcribeQuote(blob) {
-    const formData = new FormData();
-    formData.append('audio', blob, 'quote.webm');
-    formData.append('context', 'quote');
-
-    try {
-        document.getElementById('quoteTranscriptionText').innerHTML = '<i class="bi bi-hourglass-split"></i> Trascrizione in corso...';
-        document.getElementById('quoteTranscriptionResult').style.display = 'block';
-
-        const response = await fetch('/api/transcribe', {
-            method: 'POST',
-            body: formData
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-            document.getElementById('quoteTranscriptionText').textContent = data.transcription;
-            document.getElementById('hiddenVoiceRequest').value = data.transcription;
-
-            // Auto-fill form
-            if (data.parsed_info) {
-                if (data.parsed_info.customer_name) {
-                    document.getElementById('quoteCustomerName').value = data.parsed_info.customer_name;
-                }
-                if (data.parsed_info.description) {
-                    document.getElementById('quoteDescription').value = data.parsed_info.description;
-                }
-                if (data.parsed_info.estimated_price) {
-                    document.getElementById('quoteEstimatedPrice').value = data.parsed_info.estimated_price;
-                }
-            }
-        } else {
-            document.getElementById('quoteTranscriptionText').textContent = 'Errore: ' + data.error;
-        }
-    } catch (error) {
-        console.error('Error:', error);
-        document.getElementById('quoteTranscriptionText').textContent = 'Errore nella trascrizione.';
-    }
-}
-
 // Price breakdown calculator
 document.getElementById('quoteEstimatedPrice').addEventListener('input', function() {
     const price = parseFloat(this.value) || 0;

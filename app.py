@@ -171,6 +171,23 @@ def new_project():
         if photos:
             project.set_photos(photos)
 
+        # Handle ALL project files (PDFs, CAD, documents, etc.)
+        project_files_list = []
+        if 'project_files' in request.files:
+            files = request.files.getlist('project_files')
+            for file in files:
+                if file and file.filename:
+                    filename = save_uploaded_file(file, Config.FILES_FOLDER, Config.ALL_ALLOWED_EXTENSIONS)
+                    if filename:
+                        project_files_list.append({
+                            'path': f"/static/uploads/files/{filename}",
+                            'filename': file.filename,
+                            'size': file.content_length or 0
+                        })
+
+        if project_files_list:
+            project.set_files(project_files_list)
+
         db.session.add(project)
         db.session.commit()
 
@@ -336,7 +353,9 @@ def update_material(material_id):
 def quick_quote():
     """Quick quote generator"""
     if request.method == 'GET':
-        return render_template('quick_quote.html')
+        # Get recent quotes
+        recent_quotes = Quote.query.order_by(desc(Quote.created_at)).limit(10).all()
+        return render_template('quick_quote.html', recent_quotes=recent_quotes)
 
     # POST - Generate quote
     try:
@@ -495,6 +514,28 @@ def search():
                 })
 
     return render_template('search.html', query=query, results=results)
+
+
+@app.route('/quote/<int:quote_id>')
+def quote_detail(quote_id):
+    """View quote details and download PDF"""
+    quote = Quote.query.get_or_404(quote_id)
+
+    # If PDF doesn't exist, generate it now
+    if not quote.pdf_path or not os.path.exists(quote.pdf_path.replace('/static/uploads/', str(Config.UPLOAD_FOLDER) + '/')):
+        pdf_filename = f"quote_{quote.id}_{uuid.uuid4().hex[:8]}.pdf"
+        pdf_path = Config.UPLOAD_FOLDER / 'quotes' / pdf_filename
+        pdf_path.parent.mkdir(parents=True, exist_ok=True)
+
+        generate_quote_pdf(quote, str(pdf_path))
+        quote.pdf_path = f"/static/uploads/quotes/{pdf_filename}"
+        db.session.commit()
+
+    return send_file(
+        quote.pdf_path.replace('/static/uploads/', str(Config.UPLOAD_FOLDER) + '/'),
+        as_attachment=True,
+        download_name=f"Preventivo_{quote.customer_name.replace(' ', '_')}_{quote.id}.pdf"
+    )
 
 
 @app.route('/settings', methods=['GET', 'POST'])

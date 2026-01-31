@@ -96,57 +96,32 @@
             </div>
         </div>
 
-        <!-- Voice Notes -->
+        <!-- Project Files -->
         <div class="card bg-alkemy-card mb-4">
             <div class="card-header">
-                <h5 class="mb-0"><i class="bi bi-mic-fill"></i> Note Vocali Aggiuntive</h5>
+                <h5 class="mb-0"><i class="bi bi-files"></i> File Progetto</h5>
             </div>
             <div class="card-body">
-                <!-- Add Voice Note Form -->
-                <div class="mb-3">
-                    <button id="addVoiceNoteBtn" class="btn btn-alkemy-orange">
-                        <i class="bi bi-plus-circle"></i> Aggiungi Nota Vocale
-                    </button>
-                    <div id="voiceNoteRecorder" style="display:none;" class="mt-3">
-                        <button id="recordVoiceNoteBtn" class="btn btn-danger">
-                            <i class="bi bi-mic-fill"></i> <span id="voiceNoteBtnText">Inizia Registrazione</span>
-                        </button>
-                        <select id="voiceNoteType" class="form-select d-inline-block w-auto ms-2">
-                            <option value="general">Nota Generale</option>
-                            <option value="problem">Problema</option>
-                            <option value="modification">Modifica</option>
-                            <option value="result">Risultato</option>
-                        </select>
-                    </div>
-                </div>
-
-                <!-- Voice Notes List -->
-                <div id="voiceNotesList">
-                    {% if voice_notes %}
-                        {% for note in voice_notes %}
-                        <div class="card bg-dark mb-2">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between">
-                                    <div>
-                                        <span class="badge bg-secondary">{{ note.note_type }}</span>
-                                        <small class="text-muted ms-2">{{ note.created_at.strftime('%d/%m/%Y %H:%M') }}</small>
-                                    </div>
-                                </div>
-                                {% if note.audio_path %}
-                                <audio controls class="w-100 mt-2">
-                                    <source src="{{ note.audio_path }}" type="audio/webm">
-                                </audio>
-                                {% endif %}
-                                {% if note.transcription %}
-                                <p class="mt-2 mb-0 text-muted">{{ note.transcription }}</p>
-                                {% endif %}
-                            </div>
+                {% if project.get_files() %}
+                <div class="list-group list-group-flush">
+                    {% for file in project.get_files() %}
+                    <div class="list-group-item bg-dark border-secondary d-flex justify-content-between align-items-center">
+                        <div>
+                            <i class="bi bi-file-earmark-pdf text-danger"></i>
+                            <strong>{{ file.filename or file.path.split('/')[-1] }}</strong>
+                            {% if file.size %}
+                            <br><small class="text-muted">{{ "%.2f"|format(file.size / 1024 / 1024) }} MB</small>
+                            {% endif %}
                         </div>
-                        {% endfor %}
-                    {% else %}
-                        <p class="text-muted">Nessuna nota vocale ancora.</p>
-                    {% endif %}
+                        <a href="{{ file.path }}" class="btn btn-sm btn-outline-light" download target="_blank">
+                            <i class="bi bi-download"></i> Scarica
+                        </a>
+                    </div>
+                    {% endfor %}
                 </div>
+                {% else %}
+                <p class="text-muted mb-0">Nessun file caricato per questo progetto.</p>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -233,64 +208,4 @@
 </div>
 {% endblock %}
 
-{% block extra_scripts %}
-<script>
-let voiceNoteRecorder = null;
-
-document.getElementById('addVoiceNoteBtn').addEventListener('click', () => {
-    document.getElementById('voiceNoteRecorder').style.display = 'block';
-});
-
-document.getElementById('recordVoiceNoteBtn').addEventListener('click', async () => {
-    if (!voiceNoteRecorder) {
-        await startVoiceNoteRecording();
-    } else {
-        await stopVoiceNoteRecording();
-    }
-});
-
-async function startVoiceNoteRecording() {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    voiceNoteRecorder = RecordRTC(stream, {
-        type: 'audio',
-        mimeType: 'audio/webm'
-    });
-
-    voiceNoteRecorder.startRecording();
-    document.getElementById('voiceNoteBtnText').textContent = 'Ferma Registrazione';
-}
-
-async function stopVoiceNoteRecording() {
-    voiceNoteRecorder.stopRecording(async () => {
-        const blob = voiceNoteRecorder.getBlob();
-        voiceNoteRecorder.stream.getTracks().forEach(track => track.stop());
-        voiceNoteRecorder = null;
-
-        document.getElementById('voiceNoteBtnText').textContent = 'Inizia Registrazione';
-
-        // Upload voice note
-        const formData = new FormData();
-        formData.append('audio', blob, 'voice_note.webm');
-        formData.append('note_type', document.getElementById('voiceNoteType').value);
-
-        try {
-            const response = await fetch('/projects/{{ project.id }}/voice-note', {
-                method: 'POST',
-                body: formData
-            });
-
-            const data = await response.json();
-
-            if (data.success) {
-                location.reload(); // Reload to show new note
-            } else {
-                alert('Errore nel salvare la nota vocale');
-            }
-        } catch (error) {
-            console.error('Error saving voice note:', error);
-            alert('Errore nel salvare la nota vocale');
-        }
-    });
-}
-</script>
 {% endblock %}

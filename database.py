@@ -38,6 +38,9 @@ class Project(db.Model):
     # Photos (JSON array of paths)
     photos = db.Column(db.Text, nullable=True)  # JSON string
 
+    # Project files (JSON array of file paths - PDFs, CAD files, etc.)
+    project_files = db.Column(db.Text, nullable=True)  # JSON string
+
     # Result rating
     result_rating = db.Column(db.Integer, nullable=True)  # 1-5 stars
 
@@ -61,6 +64,19 @@ class Project(db.Model):
     def set_photos(self, photos_list):
         """Set photos from list"""
         self.photos = json.dumps(photos_list)
+
+    def get_files(self):
+        """Get project files as list"""
+        if self.project_files:
+            try:
+                return json.loads(self.project_files)
+            except:
+                return []
+        return []
+
+    def set_files(self, files_list):
+        """Set project files from list"""
+        self.project_files = json.dumps(files_list)
 
     def to_dict(self):
         """Convert to dictionary"""

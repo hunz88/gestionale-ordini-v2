@@ -225,10 +225,10 @@ def update_project(project_id):
                         material.current_stock_kg = max(0, material.current_stock_kg - used_kg)
                         material.last_used = datetime.utcnow()
 
-        if 'actual_time_hours' in request.form:
+        if 'actual_time_hours' in request.form and request.form['actual_time_hours']:
             project.actual_time_hours = float(request.form['actual_time_hours'])
 
-        if 'result_rating' in request.form:
+        if 'result_rating' in request.form and request.form['result_rating']:
             project.result_rating = int(request.form['result_rating'])
 
         if 'settings_notes' in request.form:

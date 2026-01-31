@@ -151,13 +151,6 @@ def new_project():
             status='quote'
         )
 
-        # Handle voice note file
-        if 'voice_note' in request.files:
-            voice_file = request.files['voice_note']
-            filename = save_uploaded_file(voice_file, Config.AUDIO_FOLDER, Config.ALLOWED_AUDIO_EXTENSIONS)
-            if filename:
-                project.voice_note_path = f"/static/uploads/audio/{filename}"
-
         # Handle photos
         photos = []
         for i in range(5):  # Support up to 5 photos
@@ -179,10 +172,13 @@ def new_project():
                 if file and file.filename:
                     filename = save_uploaded_file(file, Config.FILES_FOLDER, Config.ALL_ALLOWED_EXTENSIONS)
                     if filename:
+                        # Get file size from saved file
+                        file_path = Config.FILES_FOLDER / filename
+                        file_size = file_path.stat().st_size if file_path.exists() else 0
                         project_files_list.append({
                             'path': f"/static/uploads/files/{filename}",
                             'filename': file.filename,
-                            'size': file.content_length or 0
+                            'size': file_size
                         })
 
         if project_files_list:

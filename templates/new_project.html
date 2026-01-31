@@ -14,41 +14,15 @@
 
 <div class="row">
     <div class="col-lg-8 mx-auto">
-        <!-- Step 1: Voice Note -->
-        <div class="card bg-alkemy-card mb-4">
-            <div class="card-header">
-                <h5 class="mb-0">
-                    <i class="bi bi-mic-fill"></i> Step 1: Registra Idea Progetto (Opzionale)
-                </h5>
-            </div>
-            <div class="card-body text-center">
-                <button id="recordBtn" class="btn btn-alkemy-orange btn-lg mb-3" type="button">
-                    <i class="bi bi-mic-fill"></i>
-                    <span id="recordBtnText">REGISTRA IDEA PROGETTO</span>
-                </button>
-                <div id="recordingStatus" class="text-muted mb-2" style="display:none;">
-                    <i class="bi bi-record-circle text-danger"></i>
-                    Registrazione in corso... <span id="recordingTime">0:00</span>
-                </div>
-                <div id="transcriptionResult" class="alert alert-info" style="display:none;">
-                    <strong>Trascrizione:</strong>
-                    <p id="transcriptionText" class="mb-0"></p>
-                </div>
-                <small class="text-muted">Massimo 2 minuti. Descrivi il progetto, cliente, materiale e tempi stimati.</small>
-            </div>
-        </div>
-
-        <!-- Step 2: Project Form -->
+        <!-- Project Form -->
         <form method="POST" enctype="multipart/form-data" id="projectForm">
             <div class="card bg-alkemy-card mb-4">
                 <div class="card-header">
                     <h5 class="mb-0">
-                        <i class="bi bi-file-earmark-text"></i> Step 2: Dettagli Progetto
+                        <i class="bi bi-file-earmark-text"></i> Dettagli Progetto
                     </h5>
                 </div>
                 <div class="card-body">
-                    <input type="hidden" name="transcription" id="hiddenTranscription">
-                    <input type="hidden" name="voice_note_path" id="hiddenVoiceNotePath">
 
                     <div class="mb-3">
                         <label class="form-label">Titolo Progetto *</label>
@@ -109,11 +83,11 @@
                 </div>
             </div>
 
-            <!-- Step 3: Files Upload - TUTTI I TIPI -->
+            <!-- Files Upload - TUTTI I TIPI -->
             <div class="card bg-alkemy-card mb-4">
                 <div class="card-header">
                     <h5 class="mb-0">
-                        <i class="bi bi-files"></i> Step 3: Carica File Progetto (Opzionale)
+                        <i class="bi bi-files"></i> Carica File Progetto (Opzionale)
                     </h5>
                 </div>
                 <div class="card-body">
@@ -147,129 +121,6 @@
 
 {% block extra_scripts %}
 <script>
-// Voice recording functionality
-let recorder = null;
-let audioBlob = null;
-let recordingStartTime = null;
-let recordingInterval = null;
-
-const recordBtn = document.getElementById('recordBtn');
-const recordBtnText = document.getElementById('recordBtnText');
-const recordingStatus = document.getElementById('recordingStatus');
-const recordingTime = document.getElementById('recordingTime');
-const transcriptionResult = document.getElementById('transcriptionResult');
-const transcriptionText = document.getElementById('transcriptionText');
-
-recordBtn.addEventListener('click', async () => {
-    if (!recorder) {
-        await startRecording();
-    } else {
-        await stopRecording();
-    }
-});
-
-async function startRecording() {
-    try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        recorder = RecordRTC(stream, {
-            type: 'audio',
-            mimeType: 'audio/webm',
-            recorderType: RecordRTC.StereoAudioRecorder
-        });
-
-        recorder.startRecording();
-        recordingStartTime = Date.now();
-
-        recordBtn.classList.remove('btn-alkemy-orange');
-        recordBtn.classList.add('btn-danger');
-        recordBtnText.textContent = 'FERMA REGISTRAZIONE';
-        recordingStatus.style.display = 'block';
-
-        // Update recording time
-        recordingInterval = setInterval(() => {
-            const elapsed = Math.floor((Date.now() - recordingStartTime) / 1000);
-            const minutes = Math.floor(elapsed / 60);
-            const seconds = elapsed % 60;
-            recordingTime.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-
-            // Auto-stop at 2 minutes
-            if (elapsed >= 120) {
-                stopRecording();
-            }
-        }, 1000);
-
-    } catch (error) {
-        console.error('Error accessing microphone:', error);
-        alert('Errore nell\'accesso al microfono. Verifica i permessi.');
-    }
-}
-
-async function stopRecording() {
-    if (!recorder) return;
-
-    recorder.stopRecording(async () => {
-        audioBlob = recorder.getBlob();
-        recorder.stream.getTracks().forEach(track => track.stop());
-        recorder = null;
-
-        clearInterval(recordingInterval);
-        recordBtn.classList.remove('btn-danger');
-        recordBtn.classList.add('btn-alkemy-orange');
-        recordBtnText.textContent = 'REGISTRA IDEA PROGETTO';
-        recordingStatus.style.display = 'none';
-
-        // Transcribe audio
-        await transcribeAudio(audioBlob);
-    });
-}
-
-async function transcribeAudio(blob) {
-    const formData = new FormData();
-    formData.append('audio', blob, 'recording.webm');
-    formData.append('context', 'project');
-
-    try {
-        transcriptionText.innerHTML = '<i class="bi bi-hourglass-split"></i> Trascrizione in corso...';
-        transcriptionResult.style.display = 'block';
-
-        const response = await fetch('/api/transcribe', {
-            method: 'POST',
-            body: formData
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-            transcriptionText.textContent = data.transcription;
-            document.getElementById('hiddenTranscription').value = data.transcription;
-
-            // Auto-fill form with parsed info
-            if (data.parsed_info) {
-                if (data.parsed_info.customer_name) {
-                    document.getElementById('customerName').value = data.parsed_info.customer_name;
-                }
-                if (data.parsed_info.quantity) {
-                    document.getElementById('quantity').value = data.parsed_info.quantity;
-                }
-                if (data.parsed_info.estimated_hours) {
-                    document.getElementById('estimatedTime').value = data.parsed_info.estimated_hours;
-                }
-                if (!document.getElementById('projectTitle').value) {
-                    document.getElementById('projectTitle').value = data.transcription.substring(0, 100);
-                }
-            }
-
-            // Update cost preview
-            updateCostPreview();
-        } else {
-            transcriptionText.textContent = 'Errore nella trascrizione: ' + data.error;
-        }
-    } catch (error) {
-        console.error('Transcription error:', error);
-        transcriptionText.textContent = 'Errore nella trascrizione.';
-    }
-}
-
 // Filter materials by printer type
 document.getElementById('printerType').addEventListener('change', function() {
     const printerType = this.value;

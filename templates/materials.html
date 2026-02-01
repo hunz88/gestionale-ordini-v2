@@ -96,6 +96,14 @@
                                 data-current-stock="{{ material.current_stock_kg }}">
                             <i class="bi bi-pencil"></i> Stock
                         </button>
+                        <br>
+                        <form method="POST" action="{{ url_for('delete_material', material_id=material.id) }}"
+                              style="display: inline;"
+                              onsubmit="return confirm('Sei sicuro di voler eliminare {{ material.name }}? Questa azione NON può essere annullata!');">
+                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                <i class="bi bi-trash"></i> Elimina
+                            </button>
+                        </form>
                     </div>
                 </div>
 

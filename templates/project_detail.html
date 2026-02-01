@@ -204,6 +204,24 @@
                 </form>
             </div>
         </div>
+
+        <!-- Delete Project -->
+        <div class="card bg-alkemy-card border-danger mb-4">
+            <div class="card-header bg-danger">
+                <h5 class="mb-0"><i class="bi bi-trash"></i> Zona Pericolosa</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted mb-3">
+                    <small>L'eliminazione del progetto è permanente e non può essere annullata.</small>
+                </p>
+                <form method="POST" action="{{ url_for('delete_project', project_id=project.id) }}"
+                      onsubmit="return confirm('Sei sicuro di voler eliminare questo progetto? Questa azione NON può essere annullata!');">
+                    <button type="submit" class="btn btn-danger w-100">
+                        <i class="bi bi-trash-fill"></i> Elimina Progetto
+                    </button>
+                </form>
+            </div>
+        </div>
     </div>
 </div>
 {% endblock %}

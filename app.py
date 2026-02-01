@@ -244,6 +244,24 @@ def update_project(project_id):
     return redirect(url_for('project_detail', project_id=project_id))
 
 
+@app.route('/projects/<int:project_id>/delete', methods=['POST'])
+def delete_project(project_id):
+    """Delete project"""
+    project = Project.query.get_or_404(project_id)
+
+    try:
+        # Delete associated voice notes (will cascade automatically due to relationship)
+        db.session.delete(project)
+        db.session.commit()
+        flash('Progetto eliminato con successo!', 'success')
+        return redirect(url_for('dashboard'))
+
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Errore nell\'eliminazione: {str(e)}', 'danger')
+        return redirect(url_for('project_detail', project_id=project_id))
+
+
 @app.route('/projects/<int:project_id>/voice-note', methods=['POST'])
 def add_voice_note(project_id):
     """Add voice note to project"""
@@ -341,6 +359,29 @@ def update_material(material_id):
     except Exception as e:
         db.session.rollback()
         flash(f'Errore: {str(e)}', 'danger')
+
+    return redirect(url_for('materials'))
+
+
+@app.route('/materials/<int:material_id>/delete', methods=['POST'])
+def delete_material(material_id):
+    """Delete material"""
+    material = Material.query.get_or_404(material_id)
+
+    try:
+        # Check if material is used in any projects
+        projects_using = Project.query.filter_by(material_id=material_id).count()
+        if projects_using > 0:
+            flash(f'Impossibile eliminare: {projects_using} progetti usano questo materiale!', 'danger')
+            return redirect(url_for('materials'))
+
+        db.session.delete(material)
+        db.session.commit()
+        flash('Materiale eliminato con successo!', 'success')
+
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Errore nell\'eliminazione: {str(e)}', 'danger')
 
     return redirect(url_for('materials'))
 

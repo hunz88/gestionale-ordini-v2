@@ -1582,6 +1582,81 @@ def create_fattura_da_ordine():
         logging.error(f"Errore create_fattura_da_ordine: {e}")
         return jsonify({'error': str(e)}), 500
 
+def genera_testo_fattura(fattura):
+    """Genera il testo formattato della fattura per la stampa"""
+    try:
+        from backend.fatture.config_cedente import DATI_CEDENTE
+
+        # Nome cliente
+        if fattura.cliente.ragione_sociale:
+            nome_cliente = fattura.cliente.ragione_sociale
+        else:
+            nome_cliente = f"{fattura.cliente.nome} {fattura.cliente.cognome}"
+
+        # Costruisci testo fattura
+        testo = []
+        testo.append("=" * 48)
+        testo.append("           FATTURA ELETTRONICA")
+        testo.append("=" * 48)
+        testo.append("")
+        testo.append(f"Fattura N. {fattura.anno}/{fattura.numero}")
+        testo.append(f"Data: {fattura.data_emissione.strftime('%d/%m/%Y')}")
+        testo.append("")
+        testo.append("-" * 48)
+        testo.append("CEDENTE / PRESTATORE:")
+        testo.append("-" * 48)
+        testo.append(DATI_CEDENTE['denominazione'])
+        testo.append(f"P.IVA: {DATI_CEDENTE['partita_iva']}")
+        testo.append(f"{DATI_CEDENTE['indirizzo']}")
+        testo.append(f"{DATI_CEDENTE['cap']} {DATI_CEDENTE['citta']} ({DATI_CEDENTE['provincia']})")
+        testo.append("")
+        testo.append("-" * 48)
+        testo.append("CLIENTE:")
+        testo.append("-" * 48)
+        testo.append(nome_cliente)
+        if fattura.cliente.partita_iva:
+            testo.append(f"P.IVA: {fattura.cliente.partita_iva}")
+        testo.append(f"CF: {fattura.cliente.codice_fiscale}")
+        testo.append(f"{fattura.cliente.indirizzo}")
+        testo.append(f"{fattura.cliente.cap} {fattura.cliente.citta} ({fattura.cliente.provincia})")
+        if fattura.cliente.pec:
+            testo.append(f"PEC: {fattura.cliente.pec}")
+        if fattura.cliente.codice_destinatario != '0000000':
+            testo.append(f"SDI: {fattura.cliente.codice_destinatario}")
+        testo.append("")
+        testo.append("=" * 48)
+        testo.append("DETTAGLIO ARTICOLI:")
+        testo.append("=" * 48)
+
+        # Righe fattura
+        for riga in fattura.righe:
+            testo.append("")
+            testo.append(f"{riga.quantita:.0f}x {riga.descrizione}")
+            testo.append(f"  € {riga.prezzo_unitario:.2f} x {riga.quantita:.0f} = € {riga.totale_riga:.2f}")
+            testo.append(f"  IVA {riga.aliquota_iva:.0f}%")
+
+        testo.append("")
+        testo.append("=" * 48)
+        testo.append("TOTALI:")
+        testo.append("-" * 48)
+        testo.append(f"Imponibile:        € {fattura.imponibile:.2f}")
+        testo.append(f"IVA:               € {fattura.iva:.2f}")
+        testo.append(f"TOTALE:            € {fattura.totale:.2f}")
+        testo.append("=" * 48)
+        testo.append("")
+        testo.append("Documento fiscale valido ai fini IVA")
+        testo.append("File XML generato per invio telematico")
+        testo.append("")
+        testo.append("Grazie per aver scelto i nostri servizi!")
+        testo.append("")
+        testo.append("=" * 48)
+
+        return "\n".join(testo)
+
+    except Exception as e:
+        logging.error(f"Errore genera_testo_fattura: {e}")
+        return f"FATTURA {fattura.anno}/{fattura.numero}\nTOTALE: €{fattura.totale:.2f}\n(Errore generazione dettaglio)"
+
 @app.route("/api/fatture/<int:id>/emetti", methods=["POST"])
 @requires_auth
 def emetti_fattura(id):
@@ -1638,6 +1713,14 @@ def emetti_fattura(id):
         fattura.stato = 'emessa'
         fattura.updated_at = datetime.utcnow()
         db.session.commit()
+
+        # Stampa fattura automaticamente
+        try:
+            testo_fattura = genera_testo_fattura(fattura)
+            enqueue_print(f"FATT-{fattura.numero}", testo_fattura, 'bar')
+            logging.info(f"📄 Fattura {fattura.anno}/{fattura.numero} inviata alla stampante")
+        except Exception as print_err:
+            logging.error(f"⚠️ Errore stampa fattura: {print_err}")
 
         return jsonify({
             'ok': True,

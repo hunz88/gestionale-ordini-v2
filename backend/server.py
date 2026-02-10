@@ -1182,7 +1182,6 @@ def ordina_tasti_rapidi():
 # ────────────────────────────── CLIENTI ──────────────────────────────
 
 @app.route("/api/clienti", methods=["GET"])
-@requires_auth
 def get_clienti():
     """Ritorna lista clienti attivi con ricerca opzionale"""
     try:
@@ -1234,7 +1233,6 @@ def get_clienti():
         return jsonify({'error': str(e)}), 500
 
 @app.route("/api/clienti/<int:id>", methods=["GET"])
-@requires_auth
 def get_cliente(id):
     """Ritorna dettagli cliente"""
     try:
@@ -1266,7 +1264,6 @@ def get_cliente(id):
         return jsonify({'error': str(e)}), 500
 
 @app.route("/api/clienti", methods=["POST"])
-@requires_auth
 def create_cliente():
     """Crea nuovo cliente"""
     try:
@@ -1315,7 +1312,6 @@ def create_cliente():
         return jsonify({'error': str(e)}), 500
 
 @app.route("/api/clienti/<int:id>", methods=["PUT"])
-@requires_auth
 def update_cliente(id):
     """Aggiorna cliente esistente"""
     try:
@@ -1378,7 +1374,6 @@ def update_cliente(id):
         return jsonify({'error': str(e)}), 500
 
 @app.route("/api/clienti/<int:id>", methods=["DELETE"])
-@requires_auth
 def delete_cliente(id):
     """Disattiva cliente (soft delete)"""
     try:
@@ -1399,7 +1394,6 @@ def delete_cliente(id):
 # ────────────────────────────── FATTURE ──────────────────────────────
 
 @app.route("/api/fatture", methods=["GET"])
-@requires_auth
 def get_fatture():
     """Ritorna lista fatture con filtri opzionali"""
     try:
@@ -1437,7 +1431,6 @@ def get_fatture():
         return jsonify({'error': str(e)}), 500
 
 @app.route("/api/fatture/<int:id>", methods=["GET"])
-@requires_auth
 def get_fattura(id):
     """Ritorna dettagli fattura con righe"""
     try:
@@ -1488,7 +1481,6 @@ def get_fattura(id):
         return jsonify({'error': str(e)}), 500
 
 @app.route("/api/fatture/da-ordine", methods=["POST"])
-@requires_auth
 def create_fattura_da_ordine():
     """Crea fattura da ordine/comanda esistente"""
     try:
@@ -1658,7 +1650,6 @@ def genera_testo_fattura(fattura):
         return f"FATTURA {fattura.anno}/{fattura.numero}\nTOTALE: €{fattura.totale:.2f}\n(Errore generazione dettaglio)"
 
 @app.route("/api/fatture/<int:id>/emetti", methods=["POST"])
-@requires_auth
 def emetti_fattura(id):
     """Emette la fattura generando il file XML"""
     try:
@@ -1736,7 +1727,6 @@ def emetti_fattura(id):
         return jsonify({'error': str(e)}), 500
 
 @app.route("/api/fatture/<int:id>/xml", methods=["GET"])
-@requires_auth
 def download_xml_fattura(id):
     """Download file XML fattura"""
     try:
@@ -1756,7 +1746,6 @@ def download_xml_fattura(id):
         return jsonify({'error': str(e)}), 500
 
 @app.route("/api/fatture/<int:id>", methods=["DELETE"])
-@requires_auth
 def delete_fattura(id):
     """Elimina fattura (solo se in bozza)"""
     try:
@@ -1781,7 +1770,6 @@ def delete_fattura(id):
         return jsonify({'error': str(e)}), 500
 
 @app.route("/api/fatture/config", methods=["GET"])
-@requires_auth
 def get_config_fatture():
     """Ritorna configurazione cedente per il frontend"""
     try:
@@ -1810,7 +1798,6 @@ def statistiche_html():
     return send_from_directory(app.static_folder, "statistiche.html")
 
 @app.route("/gestione_fatture.html")
-@requires_auth
 def fatture_html():
     return send_from_directory(app.static_folder, "gestione_fatture.html")
 

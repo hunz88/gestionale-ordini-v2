@@ -581,6 +581,7 @@
     <h1>🌅 Sunset Bar</h1>
     <div class="header-buttons">
       <button onclick="location.href='tablet.html'">💻</button>
+      <button onclick="location.href='/gestione_fatture.html'" title="Gestione Fatture">📄</button>
       <button onclick="location.href='/history.html'">📋</button>
       <button onclick="location.href='/admin.html'">⚙️</button>
     </div>
@@ -651,13 +652,18 @@
         <span>TOTALE:</span>
         <span id="totale-display">€0.00</span>
       </div>
-      <button class="btn-invia" id="btn-invia" onclick="inviaOrdine()" disabled>
-        📤 Invia Ordine
-      </button>
+      <div style="display:flex;gap:0.5rem;width:100%">
+        <button class="btn-invia" id="btn-invia" onclick="inviaOrdine()" disabled style="flex:1">
+          📤 Invia Ordine
+        </button>
+        <button class="btn-invia" id="btn-fattura" onclick="apriModalFattura()" disabled style="flex:1;background:#28a745">
+          📄 Fattura
+        </button>
+      </div>
     </div>
   </div>
 
-  <!-- MODAL -->
+  <!-- MODAL PERSONALIZZA -->
   <div class="modal" id="modal-personalizza">
     <div class="modal-content">
       <div class="modal-header">
@@ -665,6 +671,47 @@
         <button class="btn-close" onclick="chiudiModal()">×</button>
       </div>
       <div id="modal-body"></div>
+    </div>
+  </div>
+
+  <!-- MODAL FATTURA -->
+  <div class="modal" id="modal-fattura" style="display:none">
+    <div class="modal-content" style="max-width:600px">
+      <div class="modal-header">
+        <div class="modal-title">📄 Emetti Fattura</div>
+        <button class="btn-close" onclick="chiudiModalFattura()">×</button>
+      </div>
+      <div style="padding:1rem">
+        <div id="fattura-alert" style="margin-bottom:1rem"></div>
+
+        <div style="margin-bottom:1rem">
+          <h3 style="margin-bottom:0.5rem;color:#2d3748">Seleziona Cliente</h3>
+          <input type="text" id="search-cliente" placeholder="🔍 Cerca cliente..."
+                 style="width:100%;padding:0.5rem;font-size:1rem;border:2px solid #667eea;border-radius:0.5rem;margin-bottom:0.5rem"
+                 oninput="cercaClienti()">
+          <div id="clienti-list" style="max-height:200px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:0.5rem;padding:0.5rem"></div>
+        </div>
+
+        <div style="text-align:center;margin-bottom:1rem">
+          <a href="/gestione_fatture.html" target="_blank" style="color:#667eea;text-decoration:underline">
+            ➕ Crea nuovo cliente
+          </a>
+        </div>
+
+        <div id="fattura-preview" style="display:none;background:#f7fafc;padding:1rem;border-radius:0.5rem;margin-bottom:1rem">
+          <h4 style="margin-bottom:0.5rem">Anteprima Fattura</h4>
+          <div id="preview-content"></div>
+        </div>
+
+        <div style="display:flex;gap:0.5rem">
+          <button class="btn-invia" onclick="confermaFattura()" id="btn-conferma-fattura" disabled style="flex:1;background:#28a745">
+            ✅ Conferma e Genera
+          </button>
+          <button class="btn-invia" onclick="chiudiModalFattura()" style="flex:0.5;background:#6c757d">
+            Annulla
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -1074,6 +1121,209 @@
         alert('❌ Errore: ' + e.message);
       }
     }
+
+    // ==================== GESTIONE FATTURA ====================
+    let clientiDisponibili = [];
+    let clienteSelezionato = null;
+
+    async function apriModalFattura() {
+      if (!tavoloSelezionato || carrello.length === 0) {
+        alert('⚠️ Seleziona tavolo e aggiungi articoli prima di emettere fattura');
+        return;
+      }
+
+      // Carica clienti
+      await caricaClienti();
+
+      document.getElementById('modal-fattura').style.display = 'flex';
+      document.getElementById('search-cliente').value = '';
+      document.getElementById('fattura-preview').style.display = 'none';
+      clienteSelezionato = null;
+      mostraClienti(clientiDisponibili);
+    }
+
+    function chiudiModalFattura() {
+      document.getElementById('modal-fattura').style.display = 'none';
+      clienteSelezionato = null;
+    }
+
+    async function caricaClienti() {
+      try {
+        const res = await fetch('/api/clienti');
+        if (res.ok) {
+          clientiDisponibili = await res.json();
+        }
+      } catch (e) {
+        console.error('Errore caricamento clienti:', e);
+      }
+    }
+
+    function cercaClienti() {
+      const search = document.getElementById('search-cliente').value.toLowerCase();
+      if (search.length === 0) {
+        mostraClienti(clientiDisponibili);
+      } else {
+        const filtrati = clientiDisponibili.filter(c =>
+          c.display_name.toLowerCase().includes(search) ||
+          (c.partita_iva && c.partita_iva.toLowerCase().includes(search)) ||
+          c.codice_fiscale.toLowerCase().includes(search)
+        );
+        mostraClienti(filtrati);
+      }
+    }
+
+    function mostraClienti(clienti) {
+      const container = document.getElementById('clienti-list');
+
+      if (clienti.length === 0) {
+        container.innerHTML = '<div style="padding:1rem;text-align:center;color:#a0aec0">Nessun cliente trovato</div>';
+        return;
+      }
+
+      let html = '';
+      clienti.forEach(c => {
+        const icon = c.tipo_soggetto === 'azienda' ? '🏢' : '👤';
+        html += `
+          <div onclick="selezionaCliente(${c.id})"
+               style="padding:0.5rem;cursor:pointer;border-radius:0.25rem;margin-bottom:0.25rem;background:white;border:2px solid transparent"
+               onmouseover="this.style.background='#edf2f7'"
+               onmouseout="this.style.background='white'"
+               id="cliente-item-${c.id}">
+            <div style="font-weight:bold">${icon} ${c.display_name}</div>
+            <div style="font-size:0.85rem;color:#718096">
+              ${c.partita_iva ? 'P.IVA: ' + c.partita_iva : 'CF: ' + c.codice_fiscale}
+            </div>
+          </div>
+        `;
+      });
+      container.innerHTML = html;
+    }
+
+    function selezionaCliente(id) {
+      clienteSelezionato = clientiDisponibili.find(c => c.id === id);
+
+      // Evidenzia selezione
+      document.querySelectorAll('[id^="cliente-item-"]').forEach(el => {
+        el.style.border = '2px solid transparent';
+      });
+      document.getElementById('cliente-item-' + id).style.border = '2px solid #667eea';
+
+      // Mostra anteprima
+      mostraAnteprimaFattura();
+
+      // Abilita conferma
+      document.getElementById('btn-conferma-fattura').disabled = false;
+    }
+
+    function mostraAnteprimaFattura() {
+      const preview = document.getElementById('fattura-preview');
+      const content = document.getElementById('preview-content');
+
+      const totale = carrello.reduce((sum, item) => sum + (item.qty * item.prezzo), 0);
+      const iva = totale * 0.22; // Assumo 22% IVA
+      const imponibile = totale / 1.22;
+
+      let html = `
+        <div style="margin-bottom:0.5rem">
+          <strong>Cliente:</strong> ${clienteSelezionato.display_name}<br>
+          <strong>Tavolo:</strong> ${tavoloSelezionato}
+        </div>
+        <div style="margin-bottom:0.5rem">
+          <strong>Articoli:</strong> ${carrello.length}<br>
+        `;
+
+      carrello.forEach(item => {
+        html += `<div style="font-size:0.85rem">- ${item.qty}× ${item.nome} (€${(item.qty * item.prezzo).toFixed(2)})</div>`;
+      });
+
+      html += `
+        </div>
+        <div style="border-top:2px solid #cbd5e0;padding-top:0.5rem;font-weight:bold">
+          <div>Imponibile: €${imponibile.toFixed(2)}</div>
+          <div>IVA 22%: €${iva.toFixed(2)}</div>
+          <div style="font-size:1.2rem;color:#28a745">TOTALE: €${totale.toFixed(2)}</div>
+        </div>
+      `;
+
+      content.innerHTML = html;
+      preview.style.display = 'block';
+    }
+
+    async function confermaFattura() {
+      if (!clienteSelezionato) {
+        alert('⚠️ Seleziona un cliente');
+        return;
+      }
+
+      const alertDiv = document.getElementById('fattura-alert');
+      alertDiv.innerHTML = '<div style="padding:0.5rem;background:#fff3cd;border-radius:0.25rem">⏳ Generazione fattura in corso...</div>';
+
+      try {
+        // Prepara items per la fattura
+        const items = carrello.map(item => ({
+          nome: item.nome,
+          qty: item.qty,
+          prezzo: item.prezzo,
+          aliquota_iva: 22 // Default, può essere personalizzato
+        }));
+
+        // Crea fattura
+        const res = await fetch('/api/fatture/da-ordine', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            cliente_id: clienteSelezionato.id,
+            items: items
+          })
+        });
+
+        const result = await res.json();
+
+        if (res.ok) {
+          const fatturaId = result.id;
+
+          // Emetti fattura (genera XML)
+          const resEmetti = await fetch(`/api/fatture/${fatturaId}/emetti`, {
+            method: 'POST'
+          });
+
+          const resultEmetti = await resEmetti.json();
+
+          if (resEmetti.ok) {
+            alertDiv.innerHTML = `
+              <div style="padding:0.5rem;background:#d4edda;border-radius:0.25rem;color:#155724">
+                ✅ Fattura ${resultEmetti.numero_completo} emessa con successo!
+              </div>
+            `;
+
+            // Svuota carrello
+            setTimeout(() => {
+              carrello = [];
+              tavoloSelezionato = '';
+              inputTavolo = '';
+              document.querySelectorAll('.tavolo-btn').forEach(btn => btn.classList.remove('selected'));
+              updateDisplay();
+              chiudiModalFattura();
+              alert('✅ Fattura emessa! Puoi scaricare l\'XML dalla sezione Fatture.');
+            }, 2000);
+          } else {
+            alertDiv.innerHTML = `<div style="padding:0.5rem;background:#f8d7da;border-radius:0.25rem;color:#721c24">❌ Errore generazione XML: ${resultEmetti.error}</div>`;
+          }
+        } else {
+          alertDiv.innerHTML = `<div style="padding:0.5rem;background:#f8d7da;border-radius:0.25rem;color:#721c24">❌ Errore creazione fattura: ${result.error}</div>`;
+        }
+      } catch (e) {
+        console.error('Errore conferma fattura:', e);
+        alertDiv.innerHTML = `<div style="padding:0.5rem;background:#f8d7da;border-radius:0.25rem;color:#721c24">❌ Errore: ${e.message}</div>`;
+      }
+    }
+
+    // Aggiorna anche il pulsante fattura quando cambia lo stato
+    const updateDisplayOriginal = updateDisplay;
+    updateDisplay = function() {
+      updateDisplayOriginal();
+      document.getElementById('btn-fattura').disabled = !tavoloSelezionato || carrello.length === 0;
+    };
 
     init();
   </script>

@@ -154,6 +154,66 @@ class TastoRapido(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 # ══════════════════════════════════════════════════════════════════════════════
+# MODELLI FATTURAZIONE ELETTRONICA
+# ══════════════════════════════════════════════════════════════════════════════
+class Cliente(db.Model):
+    __tablename__ = 'clienti'
+    id = db.Column(db.Integer, primary_key=True)
+    tipo_soggetto = db.Column(db.String(20), default='azienda')  # azienda, privato
+    partita_iva = db.Column(db.String(11))  # Solo per aziende
+    codice_fiscale = db.Column(db.String(16), nullable=False)
+    ragione_sociale = db.Column(db.String(200))  # Per aziende
+    nome = db.Column(db.String(100))  # Per privati
+    cognome = db.Column(db.String(100))  # Per privati
+    indirizzo = db.Column(db.String(200), nullable=False)
+    cap = db.Column(db.String(5), nullable=False)
+    citta = db.Column(db.String(100), nullable=False)
+    provincia = db.Column(db.String(2), nullable=False)
+    nazione = db.Column(db.String(2), default='IT')
+    codice_destinatario = db.Column(db.String(7), default='0000000')  # SDI 7 caratteri
+    pec = db.Column(db.String(200))
+    telefono = db.Column(db.String(20))
+    email = db.Column(db.String(200))
+    note = db.Column(db.Text)
+    attivo = db.Column(db.Integer, default=1)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+class Fattura(db.Model):
+    __tablename__ = 'fatture'
+    id = db.Column(db.Integer, primary_key=True)
+    numero = db.Column(db.Integer, nullable=False)  # Progressivo annuale
+    anno = db.Column(db.Integer, nullable=False)
+    data_emissione = db.Column(db.Date, nullable=False, default=datetime.utcnow)
+    cliente_id = db.Column(db.Integer, db.ForeignKey('clienti.id'), nullable=False)
+    comanda_id = db.Column(db.Integer, db.ForeignKey('comanda.id'))  # Link all'ordine
+    imponibile = db.Column(db.Float, nullable=False, default=0)
+    iva = db.Column(db.Float, nullable=False, default=0)
+    totale = db.Column(db.Float, nullable=False, default=0)
+    percorso_xml = db.Column(db.String(500))
+    stato = db.Column(db.String(20), default='bozza')  # bozza, emessa, inviata, errore
+    note = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relazioni
+    cliente = db.relationship('Cliente', backref='fatture')
+
+class RigaFattura(db.Model):
+    __tablename__ = 'righe_fattura'
+    id = db.Column(db.Integer, primary_key=True)
+    fattura_id = db.Column(db.Integer, db.ForeignKey('fatture.id'), nullable=False)
+    numero_riga = db.Column(db.Integer, nullable=False)
+    descrizione = db.Column(db.String(500), nullable=False)
+    quantita = db.Column(db.Float, nullable=False, default=1)
+    prezzo_unitario = db.Column(db.Float, nullable=False)
+    aliquota_iva = db.Column(db.Float, nullable=False, default=22)  # 4, 10, 22
+    totale_riga = db.Column(db.Float, nullable=False)
+
+    # Relazione
+    fattura = db.relationship('Fattura', backref='righe')
+
+# ══════════════════════════════════════════════════════════════════════════════
 # AUTH
 # ══════════════════════════════════════════════════════════════════════════════
 ADMIN_USER = "admin"
@@ -1115,6 +1175,540 @@ def ordina_tasti_rapidi():
         logging.error(f"Errore ordina tasti rapidi: {e}")
         return jsonify({'error': str(e)}), 500
 
+# ══════════════════════════════════════════════════════════════════════════════
+# API FATTURAZIONE ELETTRONICA
+# ══════════════════════════════════════════════════════════════════════════════
+
+# ────────────────────────────── CLIENTI ──────────────────────────────
+
+@app.route("/api/clienti", methods=["GET"])
+@requires_auth
+def get_clienti():
+    """Ritorna lista clienti attivi con ricerca opzionale"""
+    try:
+        search = request.args.get('search', '').strip()
+
+        query = Cliente.query.filter_by(attivo=1)
+
+        if search:
+            # Ricerca in ragione sociale, nome, cognome, P.IVA, CF
+            search_pattern = f"%{search}%"
+            query = query.filter(
+                db.or_(
+                    Cliente.ragione_sociale.ilike(search_pattern),
+                    Cliente.nome.ilike(search_pattern),
+                    Cliente.cognome.ilike(search_pattern),
+                    Cliente.partita_iva.ilike(search_pattern),
+                    Cliente.codice_fiscale.ilike(search_pattern)
+                )
+            )
+
+        clienti = query.order_by(Cliente.ragione_sociale, Cliente.cognome).all()
+
+        result = []
+        for c in clienti:
+            result.append({
+                'id': c.id,
+                'tipo_soggetto': c.tipo_soggetto,
+                'partita_iva': c.partita_iva,
+                'codice_fiscale': c.codice_fiscale,
+                'ragione_sociale': c.ragione_sociale,
+                'nome': c.nome,
+                'cognome': c.cognome,
+                'indirizzo': c.indirizzo,
+                'cap': c.cap,
+                'citta': c.citta,
+                'provincia': c.provincia,
+                'nazione': c.nazione,
+                'codice_destinatario': c.codice_destinatario,
+                'pec': c.pec,
+                'telefono': c.telefono,
+                'email': c.email,
+                'note': c.note,
+                'display_name': c.ragione_sociale if c.ragione_sociale else f"{c.nome} {c.cognome}"
+            })
+
+        return jsonify(result)
+    except Exception as e:
+        logging.error(f"Errore get_clienti: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route("/api/clienti/<int:id>", methods=["GET"])
+@requires_auth
+def get_cliente(id):
+    """Ritorna dettagli cliente"""
+    try:
+        cliente = Cliente.query.get(id)
+        if not cliente:
+            return jsonify({'error': 'Cliente non trovato'}), 404
+
+        return jsonify({
+            'id': cliente.id,
+            'tipo_soggetto': cliente.tipo_soggetto,
+            'partita_iva': cliente.partita_iva,
+            'codice_fiscale': cliente.codice_fiscale,
+            'ragione_sociale': cliente.ragione_sociale,
+            'nome': cliente.nome,
+            'cognome': cliente.cognome,
+            'indirizzo': cliente.indirizzo,
+            'cap': cliente.cap,
+            'citta': cliente.citta,
+            'provincia': cliente.provincia,
+            'nazione': cliente.nazione,
+            'codice_destinatario': cliente.codice_destinatario,
+            'pec': cliente.pec,
+            'telefono': cliente.telefono,
+            'email': cliente.email,
+            'note': cliente.note
+        })
+    except Exception as e:
+        logging.error(f"Errore get_cliente: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route("/api/clienti", methods=["POST"])
+@requires_auth
+def create_cliente():
+    """Crea nuovo cliente"""
+    try:
+        from backend.fatture.fattura_elettronica import valida_codice_fiscale, valida_codice_sdi
+
+        d = request.get_json(force=True)
+
+        # Validazioni
+        if not d.get('codice_fiscale'):
+            return jsonify({'error': 'Codice fiscale obbligatorio'}), 400
+
+        if not valida_codice_fiscale(d['codice_fiscale']):
+            return jsonify({'error': 'Codice fiscale non valido'}), 400
+
+        if d.get('codice_destinatario') and not valida_codice_sdi(d['codice_destinatario']):
+            return jsonify({'error': 'Codice SDI deve essere 7 caratteri'}), 400
+
+        # Crea cliente
+        cliente = Cliente(
+            tipo_soggetto=d.get('tipo_soggetto', 'azienda'),
+            partita_iva=d.get('partita_iva', '').strip(),
+            codice_fiscale=d['codice_fiscale'].strip().upper(),
+            ragione_sociale=d.get('ragione_sociale', '').strip(),
+            nome=d.get('nome', '').strip(),
+            cognome=d.get('cognome', '').strip(),
+            indirizzo=d.get('indirizzo', '').strip(),
+            cap=d.get('cap', '').strip(),
+            citta=d.get('citta', '').strip(),
+            provincia=d.get('provincia', '').strip().upper(),
+            nazione=d.get('nazione', 'IT').upper(),
+            codice_destinatario=d.get('codice_destinatario', '0000000').strip(),
+            pec=d.get('pec', '').strip(),
+            telefono=d.get('telefono', '').strip(),
+            email=d.get('email', '').strip(),
+            note=d.get('note', '').strip(),
+            attivo=1
+        )
+
+        db.session.add(cliente)
+        db.session.commit()
+
+        return jsonify({'ok': True, 'id': cliente.id})
+    except Exception as e:
+        db.session.rollback()
+        logging.error(f"Errore create_cliente: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route("/api/clienti/<int:id>", methods=["PUT"])
+@requires_auth
+def update_cliente(id):
+    """Aggiorna cliente esistente"""
+    try:
+        from backend.fatture.fattura_elettronica import valida_codice_fiscale, valida_codice_sdi
+
+        cliente = Cliente.query.get(id)
+        if not cliente:
+            return jsonify({'error': 'Cliente non trovato'}), 404
+
+        d = request.get_json(force=True)
+
+        # Validazioni
+        if d.get('codice_fiscale') and not valida_codice_fiscale(d['codice_fiscale']):
+            return jsonify({'error': 'Codice fiscale non valido'}), 400
+
+        if d.get('codice_destinatario') and not valida_codice_sdi(d['codice_destinatario']):
+            return jsonify({'error': 'Codice SDI deve essere 7 caratteri'}), 400
+
+        # Aggiorna campi
+        if 'tipo_soggetto' in d:
+            cliente.tipo_soggetto = d['tipo_soggetto']
+        if 'partita_iva' in d:
+            cliente.partita_iva = d['partita_iva'].strip()
+        if 'codice_fiscale' in d:
+            cliente.codice_fiscale = d['codice_fiscale'].strip().upper()
+        if 'ragione_sociale' in d:
+            cliente.ragione_sociale = d['ragione_sociale'].strip()
+        if 'nome' in d:
+            cliente.nome = d['nome'].strip()
+        if 'cognome' in d:
+            cliente.cognome = d['cognome'].strip()
+        if 'indirizzo' in d:
+            cliente.indirizzo = d['indirizzo'].strip()
+        if 'cap' in d:
+            cliente.cap = d['cap'].strip()
+        if 'citta' in d:
+            cliente.citta = d['citta'].strip()
+        if 'provincia' in d:
+            cliente.provincia = d['provincia'].strip().upper()
+        if 'nazione' in d:
+            cliente.nazione = d['nazione'].upper()
+        if 'codice_destinatario' in d:
+            cliente.codice_destinatario = d['codice_destinatario'].strip()
+        if 'pec' in d:
+            cliente.pec = d['pec'].strip()
+        if 'telefono' in d:
+            cliente.telefono = d['telefono'].strip()
+        if 'email' in d:
+            cliente.email = d['email'].strip()
+        if 'note' in d:
+            cliente.note = d['note'].strip()
+
+        cliente.updated_at = datetime.utcnow()
+        db.session.commit()
+
+        return jsonify({'ok': True})
+    except Exception as e:
+        db.session.rollback()
+        logging.error(f"Errore update_cliente: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route("/api/clienti/<int:id>", methods=["DELETE"])
+@requires_auth
+def delete_cliente(id):
+    """Disattiva cliente (soft delete)"""
+    try:
+        cliente = Cliente.query.get(id)
+        if not cliente:
+            return jsonify({'error': 'Cliente non trovato'}), 404
+
+        cliente.attivo = 0
+        cliente.updated_at = datetime.utcnow()
+        db.session.commit()
+
+        return jsonify({'ok': True})
+    except Exception as e:
+        db.session.rollback()
+        logging.error(f"Errore delete_cliente: {e}")
+        return jsonify({'error': str(e)}), 500
+
+# ────────────────────────────── FATTURE ──────────────────────────────
+
+@app.route("/api/fatture", methods=["GET"])
+@requires_auth
+def get_fatture():
+    """Ritorna lista fatture con filtri opzionali"""
+    try:
+        anno = request.args.get('anno', datetime.now().year, type=int)
+        stato = request.args.get('stato', '')
+
+        query = Fattura.query.filter_by(anno=anno)
+
+        if stato:
+            query = query.filter_by(stato=stato)
+
+        fatture = query.order_by(Fattura.numero.desc()).all()
+
+        result = []
+        for f in fatture:
+            result.append({
+                'id': f.id,
+                'numero': f.numero,
+                'anno': f.anno,
+                'numero_completo': f"{f.anno}/{f.numero}",
+                'data_emissione': f.data_emissione.strftime('%Y-%m-%d'),
+                'cliente_id': f.cliente_id,
+                'cliente_nome': f.cliente.ragione_sociale if f.cliente.ragione_sociale else f"{f.cliente.nome} {f.cliente.cognome}",
+                'imponibile': f.imponibile,
+                'iva': f.iva,
+                'totale': f.totale,
+                'stato': f.stato,
+                'percorso_xml': f.percorso_xml,
+                'created_at': f.created_at.strftime('%Y-%m-%d %H:%M')
+            })
+
+        return jsonify(result)
+    except Exception as e:
+        logging.error(f"Errore get_fatture: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route("/api/fatture/<int:id>", methods=["GET"])
+@requires_auth
+def get_fattura(id):
+    """Ritorna dettagli fattura con righe"""
+    try:
+        fattura = Fattura.query.get(id)
+        if not fattura:
+            return jsonify({'error': 'Fattura non trovata'}), 404
+
+        righe = []
+        for r in fattura.righe:
+            righe.append({
+                'id': r.id,
+                'numero_riga': r.numero_riga,
+                'descrizione': r.descrizione,
+                'quantita': r.quantita,
+                'prezzo_unitario': r.prezzo_unitario,
+                'aliquota_iva': r.aliquota_iva,
+                'totale_riga': r.totale_riga
+            })
+
+        return jsonify({
+            'id': fattura.id,
+            'numero': fattura.numero,
+            'anno': fattura.anno,
+            'numero_completo': f"{fattura.anno}/{fattura.numero}",
+            'data_emissione': fattura.data_emissione.strftime('%Y-%m-%d'),
+            'cliente_id': fattura.cliente_id,
+            'cliente': {
+                'id': fattura.cliente.id,
+                'ragione_sociale': fattura.cliente.ragione_sociale,
+                'nome': fattura.cliente.nome,
+                'cognome': fattura.cliente.cognome,
+                'partita_iva': fattura.cliente.partita_iva,
+                'codice_fiscale': fattura.cliente.codice_fiscale,
+                'indirizzo': fattura.cliente.indirizzo,
+                'cap': fattura.cliente.cap,
+                'citta': fattura.cliente.citta,
+                'provincia': fattura.cliente.provincia
+            },
+            'imponibile': fattura.imponibile,
+            'iva': fattura.iva,
+            'totale': fattura.totale,
+            'stato': fattura.stato,
+            'righe': righe,
+            'note': fattura.note
+        })
+    except Exception as e:
+        logging.error(f"Errore get_fattura: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route("/api/fatture/da-ordine", methods=["POST"])
+@requires_auth
+def create_fattura_da_ordine():
+    """Crea fattura da ordine/comanda esistente"""
+    try:
+        from backend.fatture.fattura_elettronica import FatturaElettronicaXML
+
+        d = request.get_json(force=True)
+
+        comanda_id = d.get('comanda_id')
+        cliente_id = d.get('cliente_id')
+        items = d.get('items', [])  # Lista articoli dall'ordine
+
+        if not cliente_id:
+            return jsonify({'error': 'Cliente obbligatorio'}), 400
+
+        # Verifica cliente esista
+        cliente = Cliente.query.get(cliente_id)
+        if not cliente:
+            return jsonify({'error': 'Cliente non trovato'}), 404
+
+        # Calcola prossimo numero fattura per l'anno corrente
+        anno_corrente = datetime.now().year
+        ultima_fattura = Fattura.query.filter_by(anno=anno_corrente).order_by(Fattura.numero.desc()).first()
+        prossimo_numero = (ultima_fattura.numero + 1) if ultima_fattura else 1
+
+        # Calcola totali
+        imponibile = 0
+        iva_totale = 0
+        totale = 0
+
+        righe_fattura = []
+        for idx, item in enumerate(items, start=1):
+            qty = item.get('qty', 1)
+            prezzo_unit = item.get('prezzo', 0)
+            aliquota = item.get('aliquota_iva', 22)  # Default 22%
+
+            totale_riga = qty * prezzo_unit
+            iva_riga = totale_riga * (aliquota / 100)
+
+            imponibile += totale_riga
+            iva_totale += iva_riga
+
+            righe_fattura.append({
+                'numero_riga': idx,
+                'descrizione': item.get('nome', ''),
+                'quantita': qty,
+                'prezzo_unitario': prezzo_unit,
+                'aliquota_iva': aliquota,
+                'totale_riga': totale_riga
+            })
+
+        totale = imponibile + iva_totale
+
+        # Crea fattura
+        fattura = Fattura(
+            numero=prossimo_numero,
+            anno=anno_corrente,
+            data_emissione=datetime.now().date(),
+            cliente_id=cliente_id,
+            comanda_id=comanda_id,
+            imponibile=round(imponibile, 2),
+            iva=round(iva_totale, 2),
+            totale=round(totale, 2),
+            stato='bozza'
+        )
+
+        db.session.add(fattura)
+        db.session.flush()  # Per ottenere l'ID
+
+        # Crea righe fattura
+        for riga_data in righe_fattura:
+            riga = RigaFattura(
+                fattura_id=fattura.id,
+                numero_riga=riga_data['numero_riga'],
+                descrizione=riga_data['descrizione'],
+                quantita=riga_data['quantita'],
+                prezzo_unitario=riga_data['prezzo_unitario'],
+                aliquota_iva=riga_data['aliquota_iva'],
+                totale_riga=riga_data['totale_riga']
+            )
+            db.session.add(riga)
+
+        db.session.commit()
+
+        return jsonify({
+            'ok': True,
+            'id': fattura.id,
+            'numero_completo': f"{fattura.anno}/{fattura.numero}"
+        })
+    except Exception as e:
+        db.session.rollback()
+        logging.error(f"Errore create_fattura_da_ordine: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route("/api/fatture/<int:id>/emetti", methods=["POST"])
+@requires_auth
+def emetti_fattura(id):
+    """Emette la fattura generando il file XML"""
+    try:
+        from backend.fatture.fattura_elettronica import FatturaElettronicaXML
+
+        fattura = Fattura.query.get(id)
+        if not fattura:
+            return jsonify({'error': 'Fattura non trovata'}), 404
+
+        if fattura.stato not in ['bozza', 'errore']:
+            return jsonify({'error': 'Fattura già emessa'}), 400
+
+        # Prepara dati per XML
+        dati_fattura = {
+            'numero': fattura.numero,
+            'anno': fattura.anno,
+            'data_emissione': fattura.data_emissione,
+            'totale': fattura.totale
+        }
+
+        dati_cliente = {
+            'partita_iva': fattura.cliente.partita_iva,
+            'codice_fiscale': fattura.cliente.codice_fiscale,
+            'ragione_sociale': fattura.cliente.ragione_sociale,
+            'nome': fattura.cliente.nome,
+            'cognome': fattura.cliente.cognome,
+            'indirizzo': fattura.cliente.indirizzo,
+            'cap': fattura.cliente.cap,
+            'citta': fattura.cliente.citta,
+            'provincia': fattura.cliente.provincia,
+            'nazione': fattura.cliente.nazione,
+            'codice_destinatario': fattura.cliente.codice_destinatario,
+            'pec': fattura.cliente.pec
+        }
+
+        righe_xml = []
+        for r in fattura.righe:
+            righe_xml.append({
+                'descrizione': r.descrizione,
+                'quantita': r.quantita,
+                'prezzo_unitario': r.prezzo_unitario,
+                'aliquota_iva': r.aliquota_iva,
+                'totale_riga': r.totale_riga
+            })
+
+        # Genera XML
+        generatore = FatturaElettronicaXML()
+        percorso_xml = generatore.genera_xml(dati_fattura, dati_cliente, righe_xml)
+
+        # Aggiorna fattura
+        fattura.percorso_xml = percorso_xml
+        fattura.stato = 'emessa'
+        fattura.updated_at = datetime.utcnow()
+        db.session.commit()
+
+        return jsonify({
+            'ok': True,
+            'percorso_xml': percorso_xml,
+            'numero_completo': f"{fattura.anno}/{fattura.numero}"
+        })
+    except Exception as e:
+        db.session.rollback()
+        fattura.stato = 'errore'
+        fattura.note = str(e)
+        db.session.commit()
+        logging.error(f"Errore emetti_fattura: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route("/api/fatture/<int:id>/xml", methods=["GET"])
+@requires_auth
+def download_xml_fattura(id):
+    """Download file XML fattura"""
+    try:
+        fattura = Fattura.query.get(id)
+        if not fattura:
+            return jsonify({'error': 'Fattura non trovata'}), 404
+
+        if not fattura.percorso_xml or not os.path.exists(fattura.percorso_xml):
+            return jsonify({'error': 'File XML non trovato'}), 404
+
+        directory = os.path.dirname(fattura.percorso_xml)
+        filename = os.path.basename(fattura.percorso_xml)
+
+        return send_from_directory(directory, filename, as_attachment=True)
+    except Exception as e:
+        logging.error(f"Errore download_xml_fattura: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route("/api/fatture/<int:id>", methods=["DELETE"])
+@requires_auth
+def delete_fattura(id):
+    """Elimina fattura (solo se in bozza)"""
+    try:
+        fattura = Fattura.query.get(id)
+        if not fattura:
+            return jsonify({'error': 'Fattura non trovata'}), 404
+
+        if fattura.stato not in ['bozza', 'errore']:
+            return jsonify({'error': 'Impossibile eliminare fattura emessa'}), 400
+
+        # Elimina righe
+        RigaFattura.query.filter_by(fattura_id=id).delete()
+
+        # Elimina fattura
+        db.session.delete(fattura)
+        db.session.commit()
+
+        return jsonify({'ok': True})
+    except Exception as e:
+        db.session.rollback()
+        logging.error(f"Errore delete_fattura: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route("/api/fatture/config", methods=["GET"])
+@requires_auth
+def get_config_fatture():
+    """Ritorna configurazione cedente per il frontend"""
+    try:
+        from backend.fatture.fattura_elettronica import FatturaElettronicaXML
+        gen = FatturaElettronicaXML()
+        return jsonify(gen.CEDENTE)
+    except Exception as e:
+        logging.error(f"Errore get_config_fatture: {e}")
+        return jsonify({'error': str(e)}), 500
+
 # FILE STATICI
 # ══════════════════════════════════════════════════════════════════════════════
 @app.route("/admin.html")
@@ -1131,6 +1725,11 @@ def storico_html():
 @requires_auth
 def statistiche_html():
     return send_from_directory(app.static_folder, "statistiche.html")
+
+@app.route("/gestione_fatture.html")
+@requires_auth
+def fatture_html():
+    return send_from_directory(app.static_folder, "gestione_fatture.html")
 
 @app.route("/", defaults={"path":"index.html"})
 @app.route("/<path:path>")

@@ -789,6 +789,47 @@
     </div>
   </div>
 
+  <!-- MODAL FATTURA -->
+  <div class="modal-overlay" id="invoiceModal" style="display:none">
+    <div class="modal-content" style="max-width:600px">
+      <div class="modal-header">
+        <div class="modal-title">📄 Emetti Fattura</div>
+        <button class="modal-btn-close" onclick="closeInvoiceModal()">×</button>
+      </div>
+      <div style="padding:1rem">
+        <div id="invoice-alert" style="margin-bottom:1rem"></div>
+
+        <div style="margin-bottom:1rem">
+          <h3 style="margin-bottom:0.5rem;color:#2d3748">Seleziona Cliente</h3>
+          <input type="text" id="invoice-search-cliente" placeholder="🔍 Cerca cliente..."
+                 style="width:100%;padding:0.5rem;font-size:1rem;border:2px solid #007bff;border-radius:0.5rem;margin-bottom:0.5rem"
+                 oninput="searchInvoiceClients()">
+          <div id="invoice-clienti-list" style="max-height:200px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:0.5rem;padding:0.5rem;background:white"></div>
+        </div>
+
+        <div style="text-align:center;margin-bottom:1rem">
+          <a href="/gestione_fatture.html" target="_blank" style="color:#007bff;text-decoration:underline">
+            ➕ Crea nuovo cliente
+          </a>
+        </div>
+
+        <div id="invoice-preview" style="display:none;background:#f7fafc;padding:1rem;border-radius:0.5rem;margin-bottom:1rem">
+          <h4 style="margin-bottom:0.5rem">Anteprima Fattura</h4>
+          <div id="invoice-preview-content"></div>
+        </div>
+
+        <div style="display:flex;gap:0.5rem">
+          <button class="modal-btn modal-btn-primary" onclick="confirmInvoice()" id="btn-confirm-invoice" disabled style="flex:1">
+            ✅ Conferma e Genera
+          </button>
+          <button class="modal-btn" onclick="closeInvoiceModal()" style="flex:0.5">
+            Annulla
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <button class="refresh-btn" onclick="loadOrders()" title="Aggiorna ordini">🔄</button>
 
   <script>
@@ -1303,6 +1344,7 @@
                     <button class="btn-edit" onclick="openModal(${order.id}, '${order.tavolo}', \`${order.testo.replace(/`/g, '\\`')}\`)">✏️ Modifica</button>
                     <button class="btn-print" onclick="reprint(${order.id})">🖨️ Ristampa</button>
                     <button class="split-btn-mini" onclick="openSplitModal(${order.id}, '${order.tavolo}')">💳 Dividi</button>
+                    <button class="btn-complete" onclick="openInvoiceModal(${order.id}, '${order.tavolo}')" style="background:#28a745">📄 Fattura</button>
                     <button class="btn-complete" onclick="completeOrder(${order.id})">✅ Completa</button>
                     <button class="btn-delete" onclick="deleteOrder(${order.id})">🗑️ Elimina</button>
                   </div>
@@ -1388,6 +1430,225 @@
       if (e.key === 'Escape') {
         closeModal();
         closeSplitModal();
+        closeInvoiceModal();
+      }
+    });
+
+    // ==================== GESTIONE FATTURA ====================
+    let invoiceClienti = [];
+    let invoiceClienteSelezionato = null;
+    let invoiceOrderId = null;
+    let invoiceOrderData = null;
+
+    async function openInvoiceModal(orderId, tavolo) {
+      invoiceOrderId = orderId;
+
+      // Carica dati ordine
+      try {
+        const res = await fetch(`/orders/${orderId}/details`);
+        if (!res.ok) throw new Error('Errore caricamento ordine');
+        invoiceOrderData = await res.json();
+      } catch (e) {
+        showToast('❌ Errore caricamento ordine: ' + e.message, true);
+        return;
+      }
+
+      // Carica clienti
+      await loadInvoiceClients();
+
+      document.getElementById('invoiceModal').style.display = 'flex';
+      document.getElementById('invoice-search-cliente').value = '';
+      document.getElementById('invoice-preview').style.display = 'none';
+      invoiceClienteSelezionato = null;
+      showInvoiceClients(invoiceClienti);
+    }
+
+    function closeInvoiceModal() {
+      document.getElementById('invoiceModal').style.display = 'none';
+      invoiceClienteSelezionato = null;
+      invoiceOrderId = null;
+      invoiceOrderData = null;
+    }
+
+    async function loadInvoiceClients() {
+      try {
+        const res = await fetch('/api/clienti');
+        if (res.ok) {
+          invoiceClienti = await res.json();
+        }
+      } catch (e) {
+        console.error('Errore caricamento clienti:', e);
+      }
+    }
+
+    function searchInvoiceClients() {
+      const search = document.getElementById('invoice-search-cliente').value.toLowerCase();
+      if (search.length === 0) {
+        showInvoiceClients(invoiceClienti);
+      } else {
+        const filtrati = invoiceClienti.filter(c =>
+          c.display_name.toLowerCase().includes(search) ||
+          (c.partita_iva && c.partita_iva.toLowerCase().includes(search)) ||
+          c.codice_fiscale.toLowerCase().includes(search)
+        );
+        showInvoiceClients(filtrati);
+      }
+    }
+
+    function showInvoiceClients(clienti) {
+      const container = document.getElementById('invoice-clienti-list');
+
+      if (clienti.length === 0) {
+        container.innerHTML = '<div style="padding:1rem;text-align:center;color:#a0aec0">Nessun cliente trovato</div>';
+        return;
+      }
+
+      let html = '';
+      clienti.forEach(c => {
+        const icon = c.tipo_soggetto === 'azienda' ? '🏢' : '👤';
+        html += `
+          <div onclick="selectInvoiceClient(${c.id})"
+               style="padding:0.5rem;cursor:pointer;border-radius:0.25rem;margin-bottom:0.25rem;background:white;border:2px solid transparent"
+               onmouseover="this.style.background='#edf2f7'"
+               onmouseout="this.style.background='white'"
+               id="invoice-cliente-item-${c.id}">
+            <div style="font-weight:bold">${icon} ${c.display_name}</div>
+            <div style="font-size:0.85rem;color:#718096">
+              ${c.partita_iva ? 'P.IVA: ' + c.partita_iva : 'CF: ' + c.codice_fiscale}
+            </div>
+          </div>
+        `;
+      });
+      container.innerHTML = html;
+    }
+
+    function selectInvoiceClient(id) {
+      invoiceClienteSelezionato = invoiceClienti.find(c => c.id === id);
+
+      // Evidenzia selezione
+      document.querySelectorAll('[id^="invoice-cliente-item-"]').forEach(el => {
+        el.style.border = '2px solid transparent';
+      });
+      document.getElementById('invoice-cliente-item-' + id).style.border = '2px solid #007bff';
+
+      // Mostra anteprima
+      showInvoicePreview();
+
+      // Abilita conferma
+      document.getElementById('btn-confirm-invoice').disabled = false;
+    }
+
+    function showInvoicePreview() {
+      const preview = document.getElementById('invoice-preview');
+      const content = document.getElementById('invoice-preview-content');
+
+      const totale = calcolaTotale(invoiceOrderData.testo);
+
+      let html = `
+        <div style="margin-bottom:0.5rem">
+          <strong>Cliente:</strong> ${invoiceClienteSelezionato.display_name}<br>
+          <strong>Ordine:</strong> #${invoiceOrderId}<br>
+          <strong>Tavolo:</strong> ${invoiceOrderData.tavolo}
+        </div>
+        <div style="margin-bottom:0.5rem;max-height:150px;overflow-y:auto;border:1px solid #e2e8f0;padding:0.5rem;border-radius:0.25rem">
+          <strong>Articoli:</strong><br>
+          ${invoiceOrderData.testo.replace(/\n/g, '<br>')}
+        </div>
+        <div style="border-top:2px solid #cbd5e0;padding-top:0.5rem;font-weight:bold">
+          <div style="font-size:1.2rem;color:#28a745">TOTALE: €${totale.toFixed(2)}</div>
+        </div>
+      `;
+
+      content.innerHTML = html;
+      preview.style.display = 'block';
+    }
+
+    async function confirmInvoice() {
+      if (!invoiceClienteSelezionato) {
+        showToast('⚠️ Seleziona un cliente', true);
+        return;
+      }
+
+      const alertDiv = document.getElementById('invoice-alert');
+      alertDiv.innerHTML = '<div style="padding:0.5rem;background:#fff3cd;border-radius:0.25rem">⏳ Generazione fattura in corso...</div>';
+
+      try {
+        // Converti testo ordine in items per la fattura
+        const righe = invoiceOrderData.testo.split('\n').filter(r => r.trim());
+        const items = [];
+
+        for (let riga of righe) {
+          if (!riga.includes('€')) continue;
+
+          // Estrai quantità, nome e prezzo
+          const match = riga.match(/(\d+)×\s*(.+?)\s*–\s*€([\d.,]+)/);
+          if (match) {
+            const [, qty, nome, prezzo] = match;
+            items.push({
+              nome: nome.trim(),
+              qty: parseInt(qty),
+              prezzo: parseFloat(prezzo.replace(',', '.')),
+              aliquota_iva: 22
+            });
+          }
+        }
+
+        if (items.length === 0) {
+          throw new Error('Nessun articolo trovato nell\'ordine');
+        }
+
+        // Crea fattura
+        const res = await fetch('/api/fatture/da-ordine', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            comanda_id: invoiceOrderId,
+            cliente_id: invoiceClienteSelezionato.id,
+            items: items
+          })
+        });
+
+        const result = await res.json();
+
+        if (res.ok) {
+          const fatturaId = result.id;
+
+          // Emetti fattura (genera XML)
+          const resEmetti = await fetch(`/api/fatture/${fatturaId}/emetti`, {
+            method: 'POST'
+          });
+
+          const resultEmetti = await resEmetti.json();
+
+          if (resEmetti.ok) {
+            alertDiv.innerHTML = `
+              <div style="padding:0.5rem;background:#d4edda;border-radius:0.25rem;color:#155724">
+                ✅ Fattura ${resultEmetti.numero_completo} emessa con successo!
+              </div>
+            `;
+
+            // Completa ordine
+            setTimeout(async () => {
+              await completeOrder(invoiceOrderId);
+              closeInvoiceModal();
+              showToast('✅ Fattura emessa e ordine completato!');
+            }, 2000);
+          } else {
+            alertDiv.innerHTML = `<div style="padding:0.5rem;background:#f8d7da;border-radius:0.25rem;color:#721c24">❌ Errore generazione XML: ${resultEmetti.error}</div>`;
+          }
+        } else {
+          alertDiv.innerHTML = `<div style="padding:0.5rem;background:#f8d7da;border-radius:0.25rem;color:#721c24">❌ Errore creazione fattura: ${result.error}</div>`;
+        }
+      } catch (e) {
+        console.error('Errore conferma fattura:', e);
+        alertDiv.innerHTML = `<div style="padding:0.5rem;background:#f8d7da;border-radius:0.25rem;color:#721c24">❌ Errore: ${e.message}</div>`;
+      }
+    }
+
+    // Chiudi modal fattura con click esterno
+    document.getElementById('invoiceModal').addEventListener('click', (e) => {
+      if (e.target.id === 'invoiceModal') {
+        closeInvoiceModal();
       }
     });
 

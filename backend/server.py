@@ -1865,8 +1865,8 @@ if __name__ == "__main__":
     
     logging.info("="*60)
     logging.info("🌅 SUNSET BAR - Server in ascolto")
-    logging.info(f"🌐 URL: http://0.0.0.0:4000")
+    logging.info(f"🌐 URL: http://0.0.0.0:5123")
     logging.info(f"💾 Database: {DB_FILE}")
     logging.info("="*60)
     
-    app.run(host="0.0.0.0", port=5000, threaded=True, debug=False)
+    app.run(host="0.0.0.0", port=5123, threaded=True, debug=False)

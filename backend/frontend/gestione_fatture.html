@@ -326,6 +326,7 @@
         <option value="inviata">Inviata</option>
         <option value="errore">Errore</option>
       </select>
+      <button class="btn btn-success" onclick="openModalDownloadPeriodo()">📦 Scarica XML Periodo</button>
     </div>
 
     <div id="fattureList"></div>
@@ -454,6 +455,78 @@
       </div>
 
       <div id="fatturaDetail"></div>
+    </div>
+  </div>
+
+  <!-- MODAL DOWNLOAD PERIODO -->
+  <div id="modalDownloadPeriodo" class="modal">
+    <div class="modal-content" style="max-width:500px">
+      <div class="modal-header">
+        <h2>📦 Scarica XML Periodo</h2>
+        <button class="close-btn" onclick="closeModalDownloadPeriodo()">&times;</button>
+      </div>
+
+      <div id="alertDownloadContainer"></div>
+
+      <form onsubmit="return downloadXMLPeriodo(event)">
+        <div class="form-group">
+          <label>Data Da <span class="required">*</span></label>
+          <input type="date" id="dataDa" required>
+        </div>
+
+        <div class="form-group">
+          <label>Data A <span class="required">*</span></label>
+          <input type="date" id="dataA" required>
+        </div>
+
+        <div style="display:flex;gap:1rem;margin-top:1.5rem">
+          <button type="submit" class="btn btn-success" style="flex:1">📥 Scarica ZIP</button>
+          <button type="button" class="btn btn-secondary" onclick="closeModalDownloadPeriodo()">Annulla</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL MODIFICA FATTURA -->
+  <div id="modalEditFattura" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>✏️ Modifica Fattura Bozza</h2>
+        <button class="close-btn" onclick="closeModalEditFattura()">&times;</button>
+      </div>
+
+      <div id="alertEditContainer"></div>
+
+      <form id="formEditFattura" onsubmit="return saveFatturaEdit(event)">
+        <input type="hidden" id="editFatturaId">
+
+        <div class="form-group">
+          <label>Cliente <span class="required">*</span></label>
+          <select id="editClienteId" required>
+            <option value="">Seleziona cliente...</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Data Emissione <span class="required">*</span></label>
+          <input type="date" id="editDataEmissione" required>
+        </div>
+
+        <div class="form-group">
+          <label>Note</label>
+          <textarea id="editNote" placeholder="Note aggiuntive..."></textarea>
+        </div>
+
+        <h4>Righe Fattura</h4>
+        <div id="editRigheContainer"></div>
+
+        <button type="button" class="btn btn-primary btn-sm" onclick="addRigaEdit()" style="margin-bottom:1rem">➕ Aggiungi Riga</button>
+
+        <div style="display:flex;gap:1rem;margin-top:1.5rem">
+          <button type="submit" class="btn btn-success" style="flex:1">💾 Salva Modifiche</button>
+          <button type="button" class="btn btn-secondary" onclick="closeModalEditFattura()">Annulla</button>
+        </div>
+      </form>
     </div>
   </div>
 
@@ -720,16 +793,20 @@
         else if (f.stato === 'errore') badgeClass = 'badge-danger';
         else if (f.stato === 'bozza') badgeClass = 'badge-warning';
 
+        const tipoLabel = f.tipo_documento === 'TD04' ? ' 🔴 NC' : '';
+
         html += `
           <tr>
-            <td><strong>${f.numero_completo}</strong></td>
+            <td><strong>${f.numero_completo}${tipoLabel}</strong></td>
             <td>${formatDate(f.data_emissione)}</td>
             <td>${f.cliente_nome}</td>
             <td><strong>€ ${f.totale.toFixed(2)}</strong></td>
             <td><span class="badge ${badgeClass}">${f.stato.toUpperCase()}</span></td>
             <td>
-              <button class="btn btn-sm btn-primary" onclick="viewFattura(${f.id})">👁️ Dettagli</button>
+              <button class="btn btn-sm btn-primary" onclick="viewFattura(${f.id})">👁️</button>
               ${f.percorso_xml ? `<button class="btn btn-sm btn-success" onclick="downloadXML(${f.id})">💾 XML</button>` : ''}
+              ${f.stato === 'bozza' || f.stato === 'errore' ? `<button class="btn btn-sm btn-warning" onclick="editFattura(${f.id})">✏️ Modifica</button>` : ''}
+              ${f.stato === 'emessa' && f.tipo_documento !== 'TD04' ? `<button class="btn btn-sm btn-danger" onclick="createNotaCredito(${f.id})">📋 Nota Credito</button>` : ''}
               ${f.stato === 'bozza' ? `<button class="btn btn-sm btn-danger" onclick="deleteFattura(${f.id})">🗑️</button>` : ''}
             </td>
           </tr>
@@ -831,6 +908,253 @@
       } catch (err) {
         console.error('Errore eliminazione:', err);
         alert('Errore di connessione');
+      }
+    }
+
+    // ======================== DOWNLOAD PERIODO ========================
+    function openModalDownloadPeriodo() {
+      document.getElementById('alertDownloadContainer').innerHTML = '';
+
+      // Imposta date di default (primo e ultimo giorno del mese corrente)
+      const now = new Date();
+      const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+      const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+      document.getElementById('dataDa').value = firstDay.toISOString().split('T')[0];
+      document.getElementById('dataA').value = lastDay.toISOString().split('T')[0];
+
+      document.getElementById('modalDownloadPeriodo').classList.add('show');
+    }
+
+    function closeModalDownloadPeriodo() {
+      document.getElementById('modalDownloadPeriodo').classList.remove('show');
+    }
+
+    async function downloadXMLPeriodo(event) {
+      event.preventDefault();
+
+      const dataDa = document.getElementById('dataDa').value;
+      const dataA = document.getElementById('dataA').value;
+
+      try {
+        const res = await fetch('/api/fatture/download-periodo', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ data_da: dataDa, data_a: dataA })
+        });
+
+        if (!res.ok) {
+          const error = await res.json();
+          showAlertDownload('danger', '❌ ' + error.error);
+          return false;
+        }
+
+        // Download del file ZIP
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `fatture_${dataDa}_${dataA}.zip`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+
+        showAlertDownload('success', '✅ File ZIP scaricato con successo!');
+        setTimeout(() => {
+          closeModalDownloadPeriodo();
+        }, 1500);
+
+      } catch (err) {
+        console.error('Errore download periodo:', err);
+        showAlertDownload('danger', '❌ Errore di connessione');
+      }
+
+      return false;
+    }
+
+    function showAlertDownload(type, message) {
+      const container = document.getElementById('alertDownloadContainer');
+      container.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
+    }
+
+    // ======================== MODIFICA FATTURA ========================
+    let righeEditCounter = 0;
+
+    async function editFattura(id) {
+      try {
+        // Carica fattura
+        const res = await fetch(`/api/fatture/${id}`);
+        const fattura = await res.json();
+
+        if (fattura.stato !== 'bozza' && fattura.stato !== 'errore') {
+          alert('Puoi modificare solo fatture in bozza o errore');
+          return;
+        }
+
+        // Carica lista clienti
+        const resClienti = await fetch('/api/clienti');
+        const clienti = await resClienti.json();
+
+        // Popola select clienti
+        const selectClienti = document.getElementById('editClienteId');
+        selectClienti.innerHTML = '<option value="">Seleziona cliente...</option>';
+        clienti.forEach(c => {
+          const nome = c.display_name;
+          selectClienti.innerHTML += `<option value="${c.id}">${nome}</option>`;
+        });
+
+        // Popola form
+        document.getElementById('editFatturaId').value = fattura.id;
+        document.getElementById('editClienteId').value = fattura.cliente_id;
+        document.getElementById('editDataEmissione').value = fattura.data_emissione;
+        document.getElementById('editNote').value = fattura.note || '';
+
+        // Popola righe
+        const container = document.getElementById('editRigheContainer');
+        container.innerHTML = '';
+        righeEditCounter = 0;
+
+        fattura.righe.forEach(r => {
+          addRigaEdit(r);
+        });
+
+        document.getElementById('alertEditContainer').innerHTML = '';
+        document.getElementById('modalEditFattura').classList.add('show');
+
+      } catch (err) {
+        console.error('Errore caricamento fattura:', err);
+        alert('Errore caricamento fattura');
+      }
+    }
+
+    function closeModalEditFattura() {
+      document.getElementById('modalEditFattura').classList.remove('show');
+    }
+
+    function addRigaEdit(rigaData = null) {
+      const idx = righeEditCounter++;
+      const container = document.getElementById('editRigheContainer');
+
+      const div = document.createElement('div');
+      div.className = 'form-row';
+      div.style.marginBottom = '0.5rem';
+      div.style.alignItems = 'flex-end';
+      div.id = `riga-${idx}`;
+
+      div.innerHTML = `
+        <div class="form-group" style="margin-bottom:0">
+          <label>Descrizione</label>
+          <input type="text" class="riga-descrizione" value="${rigaData?.descrizione || ''}" required>
+        </div>
+        <div class="form-group" style="margin-bottom:0;flex:0 0 80px">
+          <label>Q.tà</label>
+          <input type="number" class="riga-qty" value="${rigaData?.quantita || 1}" step="0.01" required>
+        </div>
+        <div class="form-group" style="margin-bottom:0;flex:0 0 100px">
+          <label>Prezzo €</label>
+          <input type="number" class="riga-prezzo" value="${rigaData?.totale_riga ? (rigaData.totale_riga / rigaData.quantita).toFixed(2) : ''}" step="0.01" required>
+        </div>
+        <div class="form-group" style="margin-bottom:0;flex:0 0 80px">
+          <label>IVA %</label>
+          <input type="number" class="riga-iva" value="${rigaData?.aliquota_iva || 22}" step="1" required>
+        </div>
+        <button type="button" class="btn btn-danger btn-sm" onclick="removeRigaEdit(${idx})" style="height:38px">🗑️</button>
+      `;
+
+      container.appendChild(div);
+    }
+
+    function removeRigaEdit(idx) {
+      document.getElementById(`riga-${idx}`).remove();
+    }
+
+    async function saveFatturaEdit(event) {
+      event.preventDefault();
+
+      const fatturaId = document.getElementById('editFatturaId').value;
+
+      // Raccogli righe
+      const righe = [];
+      document.querySelectorAll('#editRigheContainer > div').forEach(div => {
+        const nome = div.querySelector('.riga-descrizione').value;
+        const qty = parseFloat(div.querySelector('.riga-qty').value);
+        const prezzo = parseFloat(div.querySelector('.riga-prezzo').value);
+        const iva = parseFloat(div.querySelector('.riga-iva').value);
+
+        if (nome && qty && prezzo) {
+          righe.push({ nome, qty, prezzo, aliquota_iva: iva });
+        }
+      });
+
+      if (righe.length === 0) {
+        showAlertEdit('danger', '❌ Aggiungi almeno una riga');
+        return false;
+      }
+
+      const data = {
+        cliente_id: parseInt(document.getElementById('editClienteId').value),
+        data_emissione: document.getElementById('editDataEmissione').value,
+        note: document.getElementById('editNote').value,
+        items: righe
+      };
+
+      try {
+        const res = await fetch(`/api/fatture/${fatturaId}`, {
+          method: 'PUT',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(data)
+        });
+
+        const result = await res.json();
+
+        if (res.ok) {
+          showAlertEdit('success', '✅ Fattura modificata con successo!');
+          setTimeout(() => {
+            closeModalEditFattura();
+            loadFatture();
+          }, 1000);
+        } else {
+          showAlertEdit('danger', '❌ ' + result.error);
+        }
+
+      } catch (err) {
+        console.error('Errore salvataggio fattura:', err);
+        showAlertEdit('danger', '❌ Errore di connessione');
+      }
+
+      return false;
+    }
+
+    function showAlertEdit(type, message) {
+      const container = document.getElementById('alertEditContainer');
+      container.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
+    }
+
+    // ======================== NOTA DI CREDITO ========================
+    async function createNotaCredito(fatturaId) {
+      if (!confirm('Vuoi creare una Nota di Credito per annullare questa fattura?\n\nQuesta operazione creerà un nuovo documento che annulla la fattura originale.')) {
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/fatture/${fatturaId}/nota-credito`, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'}
+        });
+
+        const result = await res.json();
+
+        if (res.ok) {
+          alert(`✅ Nota di Credito n. ${result.numero_completo} creata con successo!\n\nLa troverai in stato BOZZA. Puoi modificarla e poi emetterla.`);
+          loadFatture();
+        } else {
+          alert('❌ Errore: ' + result.error);
+        }
+
+      } catch (err) {
+        console.error('Errore creazione nota credito:', err);
+        alert('❌ Errore di connessione');
       }
     }
 

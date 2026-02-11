@@ -192,12 +192,15 @@ class Fattura(db.Model):
     totale = db.Column(db.Float, nullable=False, default=0)
     percorso_xml = db.Column(db.String(500))
     stato = db.Column(db.String(20), default='bozza')  # bozza, emessa, inviata, errore
+    tipo_documento = db.Column(db.String(10), default='TD01')  # TD01=Fattura, TD04=Nota Credito
+    fattura_riferimento_id = db.Column(db.Integer, db.ForeignKey('fatture.id'))  # Per note di credito
     note = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # Relazioni
     cliente = db.relationship('Cliente', backref='fatture')
+    fattura_riferimento = db.relationship('Fattura', remote_side=[id], backref='note_credito')
 
 class RigaFattura(db.Model):
     __tablename__ = 'righe_fattura'
@@ -242,16 +245,34 @@ def migrate_database():
     """Aggiunge colonne mancanti"""
     try:
         with db.engine.connect() as conn:
+            # Migrazione tabella voce
             result = conn.execute(db.text("PRAGMA table_info(voce)"))
             columns = [row[1] for row in result]
-            
+
             if 'destinazione_stampa' not in columns:
                 logging.info("Aggiunta colonna destinazione_stampa")
                 conn.execute(db.text("ALTER TABLE voce ADD COLUMN destinazione_stampa VARCHAR(20) DEFAULT 'cucina'"))
                 for gruppo in CUCINA_GROUPS:
                     conn.execute(db.text("UPDATE voce SET destinazione_stampa = 'cucina' WHERE gruppo = :gruppo"), {"gruppo": gruppo})
                 conn.commit()
-                logging.info("✓ Migrazione completata")
+                logging.info("✓ Migrazione voce completata")
+
+            # Migrazione tabella fatture
+            result = conn.execute(db.text("PRAGMA table_info(fatture)"))
+            fatture_columns = [row[1] for row in result]
+
+            if 'tipo_documento' not in fatture_columns:
+                logging.info("Aggiunta colonna tipo_documento")
+                conn.execute(db.text("ALTER TABLE fatture ADD COLUMN tipo_documento VARCHAR(10) DEFAULT 'TD01'"))
+                conn.commit()
+                logging.info("✓ Colonna tipo_documento aggiunta")
+
+            if 'fattura_riferimento_id' not in fatture_columns:
+                logging.info("Aggiunta colonna fattura_riferimento_id")
+                conn.execute(db.text("ALTER TABLE fatture ADD COLUMN fattura_riferimento_id INTEGER"))
+                conn.commit()
+                logging.info("✓ Colonna fattura_riferimento_id aggiunta")
+
     except Exception as e:
         logging.error(f"Errore migrazione: {e}")
 
@@ -1574,6 +1595,82 @@ def create_fattura_da_ordine():
         logging.error(f"Errore create_fattura_da_ordine: {e}")
         return jsonify({'error': str(e)}), 500
 
+@app.route("/api/fatture/<int:id>/nota-credito", methods=["POST"])
+def create_nota_credito(id):
+    """Crea una Nota di Credito per annullare una fattura emessa"""
+    try:
+        # Recupera fattura originale
+        fattura_originale = Fattura.query.get(id)
+        if not fattura_originale:
+            return jsonify({'error': 'Fattura non trovata'}), 404
+
+        if fattura_originale.stato == 'bozza':
+            return jsonify({'error': 'La fattura in bozza può essere modificata direttamente o eliminata'}), 400
+
+        if fattura_originale.tipo_documento == 'TD04':
+            return jsonify({'error': 'Non si può creare una nota di credito da un\'altra nota di credito'}), 400
+
+        # Verifica se esiste già una nota di credito per questa fattura
+        nota_esistente = Fattura.query.filter_by(
+            fattura_riferimento_id=id,
+            tipo_documento='TD04'
+        ).first()
+
+        if nota_esistente:
+            return jsonify({'error': f'Esiste già una Nota di Credito n. {nota_esistente.numero}/{nota_esistente.anno}'}), 400
+
+        # Calcola prossimo numero per l'anno corrente
+        anno_corrente = datetime.now().year
+        ultima_fattura = Fattura.query.filter_by(anno=anno_corrente).order_by(Fattura.numero.desc()).first()
+        prossimo_numero = (ultima_fattura.numero + 1) if ultima_fattura else 1
+
+        # Crea Nota di Credito
+        nota_credito = Fattura(
+            numero=prossimo_numero,
+            anno=anno_corrente,
+            data_emissione=datetime.now().date(),
+            cliente_id=fattura_originale.cliente_id,
+            imponibile=fattura_originale.imponibile,
+            iva=fattura_originale.iva,
+            totale=fattura_originale.totale,
+            stato='bozza',
+            tipo_documento='TD04',
+            fattura_riferimento_id=fattura_originale.id,
+            note=f"Nota di Credito per annullo fattura n. {fattura_originale.numero}/{fattura_originale.anno}"
+        )
+
+        db.session.add(nota_credito)
+        db.session.flush()
+
+        # Copia righe dalla fattura originale
+        righe_originali = RigaFattura.query.filter_by(fattura_id=fattura_originale.id).all()
+        for riga_orig in righe_originali:
+            riga_nc = RigaFattura(
+                fattura_id=nota_credito.id,
+                numero_riga=riga_orig.numero_riga,
+                descrizione=riga_orig.descrizione,
+                quantita=riga_orig.quantita,
+                prezzo_unitario=riga_orig.prezzo_unitario,
+                aliquota_iva=riga_orig.aliquota_iva,
+                totale_riga=riga_orig.totale_riga
+            )
+            db.session.add(riga_nc)
+
+        db.session.commit()
+
+        return jsonify({
+            'ok': True,
+            'id': nota_credito.id,
+            'numero_completo': f"{nota_credito.numero}/{nota_credito.anno}",
+            'tipo': 'TD04'
+        })
+
+    except Exception as e:
+        db.session.rollback()
+        logging.error(f"Errore create_nota_credito: {e}")
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
 def genera_testo_fattura(fattura):
     """Genera il testo formattato della fattura per la stampa"""
     try:
@@ -1667,8 +1764,19 @@ def emetti_fattura(id):
             'numero': fattura.numero,
             'anno': fattura.anno,
             'data_emissione': fattura.data_emissione,
-            'totale': fattura.totale
+            'totale': fattura.totale,
+            'tipo_documento': fattura.tipo_documento
         }
+
+        # Se è una Nota di Credito, aggiungi riferimento fattura originale
+        if fattura.tipo_documento == 'TD04' and fattura.fattura_riferimento_id:
+            fatt_rif = Fattura.query.get(fattura.fattura_riferimento_id)
+            if fatt_rif:
+                dati_fattura['fattura_riferimento'] = {
+                    'numero': fatt_rif.numero,
+                    'anno': fatt_rif.anno,
+                    'data_emissione': fatt_rif.data_emissione
+                }
 
         dati_cliente = {
             'partita_iva': fattura.cliente.partita_iva,
@@ -1745,6 +1853,63 @@ def download_xml_fattura(id):
         logging.error(f"Errore download_xml_fattura: {e}")
         return jsonify({'error': str(e)}), 500
 
+@app.route("/api/fatture/download-periodo", methods=["POST"])
+def download_xml_periodo():
+    """Download ZIP con tutti gli XML fatture in un periodo"""
+    try:
+        import zipfile
+        import tempfile
+
+        data = request.json
+        data_da_str = data.get('data_da')
+        data_a_str = data.get('data_a')
+
+        if not data_da_str or not data_a_str:
+            return jsonify({'error': 'Specificare data_da e data_a'}), 400
+
+        # Converti stringhe in date
+        data_da = datetime.strptime(data_da_str, '%Y-%m-%d').date()
+        data_a = datetime.strptime(data_a_str, '%Y-%m-%d').date()
+
+        # Recupera fatture emesse nel periodo
+        fatture = Fattura.query.filter(
+            Fattura.stato == 'emessa',
+            Fattura.data_emissione >= data_da,
+            Fattura.data_emissione <= data_a,
+            Fattura.percorso_xml.isnot(None)
+        ).all()
+
+        if not fatture:
+            return jsonify({'error': 'Nessuna fattura emessa nel periodo specificato'}), 404
+
+        # Crea file ZIP temporaneo
+        temp_zip = tempfile.NamedTemporaryFile(mode='w+b', suffix='.zip', delete=False)
+        zip_path = temp_zip.name
+        temp_zip.close()
+
+        with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+            for fattura in fatture:
+                if fattura.percorso_xml and os.path.exists(fattura.percorso_xml):
+                    # Nome file nel ZIP: IT01234567890_00001.xml
+                    filename = os.path.basename(fattura.percorso_xml)
+                    zipf.write(fattura.percorso_xml, arcname=filename)
+
+        # Nome del file ZIP da scaricare
+        zip_filename = f"fatture_{data_da_str}_{data_a_str}.zip"
+
+        # Invia il file
+        return send_from_directory(
+            os.path.dirname(zip_path),
+            os.path.basename(zip_path),
+            as_attachment=True,
+            download_name=zip_filename
+        )
+
+    except Exception as e:
+        logging.error(f"Errore download_xml_periodo: {e}")
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
 @app.route("/api/fatture/<int:id>", methods=["DELETE"])
 def delete_fattura(id):
     """Elimina fattura (solo se in bozza)"""
@@ -1767,6 +1932,80 @@ def delete_fattura(id):
     except Exception as e:
         db.session.rollback()
         logging.error(f"Errore delete_fattura: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route("/api/fatture/<int:id>", methods=["PUT"])
+def update_fattura(id):
+    """Modifica fattura (solo se in bozza)"""
+    try:
+        fattura = Fattura.query.get(id)
+        if not fattura:
+            return jsonify({'error': 'Fattura non trovata'}), 404
+
+        if fattura.stato not in ['bozza', 'errore']:
+            return jsonify({'error': 'Impossibile modificare fattura già emessa. Crea una Nota di Credito.'}), 400
+
+        data = request.json
+
+        # Aggiorna dati fattura
+        if 'cliente_id' in data:
+            fattura.cliente_id = data['cliente_id']
+        if 'data_emissione' in data:
+            fattura.data_emissione = datetime.strptime(data['data_emissione'], '%Y-%m-%d').date()
+        if 'note' in data:
+            fattura.note = data['note']
+
+        # Aggiorna righe se fornite
+        if 'items' in data:
+            # Elimina vecchie righe
+            RigaFattura.query.filter_by(fattura_id=id).delete()
+
+            # Aggiungi nuove righe
+            totale_imponibile = 0
+            totale_iva = 0
+
+            for idx, item in enumerate(data['items'], 1):
+                prezzo_unitario = float(item['prezzo'])
+                quantita = float(item.get('qty', 1))
+                aliquota_iva = float(item.get('aliquota_iva', 22))
+
+                # Calcola imponibile e IVA
+                totale_riga_lordo = prezzo_unitario * quantita
+                imponibile_riga = totale_riga_lordo / (1 + aliquota_iva / 100)
+                iva_riga = totale_riga_lordo - imponibile_riga
+
+                totale_imponibile += imponibile_riga
+                totale_iva += iva_riga
+
+                riga = RigaFattura(
+                    fattura_id=fattura.id,
+                    numero_riga=idx,
+                    descrizione=item['nome'],
+                    quantita=quantita,
+                    prezzo_unitario=imponibile_riga / quantita,
+                    aliquota_iva=aliquota_iva,
+                    totale_riga=totale_riga_lordo
+                )
+                db.session.add(riga)
+
+            # Aggiorna totali fattura
+            fattura.imponibile = round(totale_imponibile, 2)
+            fattura.iva = round(totale_iva, 2)
+            fattura.totale = round(totale_imponibile + totale_iva, 2)
+
+        fattura.updated_at = datetime.utcnow()
+        db.session.commit()
+
+        return jsonify({
+            'ok': True,
+            'id': fattura.id,
+            'numero_completo': f"{fattura.numero}/{fattura.anno}"
+        })
+
+    except Exception as e:
+        db.session.rollback()
+        logging.error(f"Errore update_fattura: {e}")
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 @app.route("/api/fatture/config", methods=["GET"])

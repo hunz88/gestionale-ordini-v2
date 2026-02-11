@@ -207,8 +207,9 @@ class FatturaElettronicaXML:
         dati_gen = ET.SubElement(body, 'DatiGenerali')
         dati_doc = ET.SubElement(dati_gen, 'DatiGeneraliDocumento')
 
-        # TipoDocumento (TD01 = Fattura)
-        ET.SubElement(dati_doc, 'TipoDocumento').text = 'TD01'
+        # TipoDocumento (TD01 = Fattura, TD04 = Nota di Credito)
+        tipo_doc = fattura.get('tipo_documento', 'TD01')
+        ET.SubElement(dati_doc, 'TipoDocumento').text = tipo_doc
 
         # Divisa
         ET.SubElement(dati_doc, 'Divisa').text = 'EUR'
@@ -226,6 +227,21 @@ class FatturaElettronicaXML:
 
         # Importo Totale Documento
         ET.SubElement(dati_doc, 'ImportoTotaleDocumento').text = f"{fattura['totale']:.2f}"
+
+        # DatiDocumentiCorrelati - per Note di Credito
+        if tipo_doc == 'TD04' and fattura.get('fattura_riferimento'):
+            dati_correlati = ET.SubElement(dati_gen, 'DatiFattureCollegate')
+            rif = fattura['fattura_riferimento']
+
+            # ID del documento collegato
+            ET.SubElement(dati_correlati, 'IdDocumento').text = f"{rif['anno']}/{rif['numero']}"
+
+            # Data del documento collegato
+            if isinstance(rif['data_emissione'], str):
+                data_rif_str = rif['data_emissione']
+            else:
+                data_rif_str = rif['data_emissione'].strftime('%Y-%m-%d')
+            ET.SubElement(dati_correlati, 'Data').text = data_rif_str
 
     def _genera_dati_beni_servizi(self, body: ET.Element, righe: List[Dict], fattura: Dict):
         """Genera sezione DatiBeniServizi con righe fattura e riepilogo IVA"""

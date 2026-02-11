@@ -254,18 +254,26 @@ class FatturaElettronicaXML:
             ET.SubElement(dettaglio, 'Descrizione').text = riga['descrizione']
             ET.SubElement(dettaglio, 'Quantita').text = f"{riga['quantita']:.2f}"
             ET.SubElement(dettaglio, 'PrezzoUnitario').text = f"{riga['prezzo_unitario']:.2f}"
-            ET.SubElement(dettaglio, 'PrezzoTotale').text = f"{riga['totale_riga']:.2f}"
-            ET.SubElement(dettaglio, 'AliquotaIVA').text = f"{riga['aliquota_iva']:.2f}"
 
-        # Calcola riepilogo IVA per aliquota
+            # SCORPORO IVA: totale_riga è IVA INCLUSA, ma XML FatturaPA vuole IMPONIBILE
+            totale_ivato = riga['totale_riga']
+            aliquota = riga['aliquota_iva']
+            imponibile_riga = totale_ivato / (1 + aliquota / 100)
+
+            ET.SubElement(dettaglio, 'PrezzoTotale').text = f"{imponibile_riga:.2f}"
+            ET.SubElement(dettaglio, 'AliquotaIVA').text = f"{aliquota:.2f}"
+
+        # Calcola riepilogo IVA per aliquota (SCORPORO IVA corretto)
         riepilogo_iva = {}
         for riga in righe:
             aliquota = riga['aliquota_iva']
             if aliquota not in riepilogo_iva:
                 riepilogo_iva[aliquota] = {'imponibile': 0, 'iva': 0}
 
-            imponibile_riga = riga['totale_riga']
-            iva_riga = imponibile_riga * (aliquota / 100)
+            # SCORPORO IVA: totale_riga è IVA INCLUSA
+            totale_ivato = riga['totale_riga']
+            imponibile_riga = totale_ivato / (1 + aliquota / 100)
+            iva_riga = totale_ivato - imponibile_riga
 
             riepilogo_iva[aliquota]['imponibile'] += imponibile_riga
             riepilogo_iva[aliquota]['iva'] += iva_riga

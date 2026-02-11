@@ -1754,7 +1754,9 @@ def genera_testo_fattura(fattura):
         for riga in fattura.righe:
             testo.append("")
             testo.append(f"{riga.quantita:.0f}x {riga.descrizione}")
-            testo.append(f"  Prezzo unit: €{riga.prezzo_unitario:.2f}")
+            # Mostra prezzo IVA INCLUSA (quello che il cliente conosce)
+            prezzo_ivato = riga.totale_riga / riga.quantita
+            testo.append(f"  Prezzo unit: €{prezzo_ivato:.2f}")
             testo.append(f"  Totale: €{riga.totale_riga:.2f}")
             testo.append(f"  IVA: {riga.aliquota_iva:.0f}%")
 

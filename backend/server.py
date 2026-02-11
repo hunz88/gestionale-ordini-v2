@@ -1560,22 +1560,24 @@ def create_fattura_da_ordine():
         righe_fattura = []
         for idx, item in enumerate(items, start=1):
             qty = item.get('qty', 1)
-            prezzo_unit = item.get('prezzo', 0)
+            prezzo_unit = item.get('prezzo', 0)  # PREZZO IVA INCLUSA
             aliquota = item.get('aliquota_iva', 10)  # BAR/SOMMINISTRAZIONE = 10%
 
-            totale_riga = qty * prezzo_unit
-            iva_riga = totale_riga * (aliquota / 100)
+            # SCORPORO IVA (prezzi sono già IVA inclusa)
+            totale_riga_lordo = qty * prezzo_unit
+            imponibile_riga = totale_riga_lordo / (1 + aliquota / 100)
+            iva_riga = totale_riga_lordo - imponibile_riga
 
-            imponibile += totale_riga
+            imponibile += imponibile_riga
             iva_totale += iva_riga
 
             righe_fattura.append({
                 'numero_riga': idx,
                 'descrizione': item.get('nome', ''),
                 'quantita': qty,
-                'prezzo_unitario': prezzo_unit,
+                'prezzo_unitario': imponibile_riga / qty,  # Prezzo SCORPORATO IVA (per coerenza con PUT)
                 'aliquota_iva': aliquota,
-                'totale_riga': totale_riga
+                'totale_riga': totale_riga_lordo  # Totale IVA inclusa
             })
 
         totale = imponibile + iva_totale

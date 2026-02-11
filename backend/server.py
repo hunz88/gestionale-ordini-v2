@@ -22,7 +22,8 @@ from flask_cors import CORS
 # ══════════════════════════════════════════════════════════════════════════════
 # CONFIG
 # ══════════════════════════════════════════════════════════════════════════════
-BASE_DIR = "/home/sunsetbar/gestionale-ordini-v2"
+# Auto-detect BASE_DIR (directory del progetto)
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DB_FILE = os.path.join(BASE_DIR, "ordini_v2.db")
 LOG_DIR = os.path.join(BASE_DIR, "logs")
 
@@ -1855,7 +1856,9 @@ def emetti_fattura(id):
         else:
             generatore = FatturaElettronicaXML()  # Usa config_cedente.py come fallback
 
-        percorso_xml = generatore.genera_xml(dati_fattura, dati_cliente, righe_xml)
+        # Directory fatture XML (relativa al BASE_DIR)
+        xml_output_dir = os.path.join(BASE_DIR, 'fatture_xml')
+        percorso_xml = generatore.genera_xml(dati_fattura, dati_cliente, righe_xml, output_dir=xml_output_dir)
 
         # Aggiorna fattura
         fattura.percorso_xml = percorso_xml

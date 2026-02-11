@@ -1672,7 +1672,7 @@ def create_nota_credito(id):
         return jsonify({'error': str(e)}), 500
 
 def genera_testo_fattura(fattura):
-    """Genera il testo formattato MINI della fattura per la stampa"""
+    """Genera il testo COMPLETO della fattura per la stampa (font piccoli gestiti da print_job.py)"""
     try:
         from backend.fatture.config_cedente import DATI_CEDENTE
 
@@ -1682,29 +1682,51 @@ def genera_testo_fattura(fattura):
         else:
             nome_cliente = f"{fattura.cliente.nome} {fattura.cliente.cognome}"
 
-        # Costruisci testo fattura MINI
+        # Costruisci testo fattura COMPLETO (font piccoli applicati da stampante)
         testo = []
-        testo.append("=" * 16)
-        testo.append(f"FATT {fattura.anno}/{fattura.numero}")
-        testo.append(fattura.data_emissione.strftime('%d/%m/%Y'))
-        testo.append("-" * 16)
-        testo.append(DATI_CEDENTE['denominazione'][:20])
-        testo.append(f"P.IVA {DATI_CEDENTE['partita_iva']}")
-        testo.append("-" * 16)
-        testo.append(nome_cliente[:25])
-        testo.append(f"CF {fattura.cliente.codice_fiscale}")
-        testo.append("-" * 16)
+        testo.append("=" * 32)
+        testo.append("FATTURA ELETTRONICA")
+        testo.append(f"N. {fattura.anno}/{fattura.numero}")
+        testo.append(f"Data: {fattura.data_emissione.strftime('%d/%m/%Y')}")
+        testo.append("=" * 32)
+        testo.append("")
+        testo.append("CEDENTE / PRESTATORE:")
+        testo.append(DATI_CEDENTE['denominazione'])
+        testo.append(f"P.IVA: {DATI_CEDENTE['partita_iva']}")
+        testo.append(f"{DATI_CEDENTE['indirizzo']}")
+        testo.append(f"{DATI_CEDENTE['cap']} {DATI_CEDENTE['citta']} ({DATI_CEDENTE['provincia']})")
+        testo.append("")
+        testo.append("CLIENTE:")
+        testo.append(nome_cliente)
+        if fattura.cliente.partita_iva:
+            testo.append(f"P.IVA: {fattura.cliente.partita_iva}")
+        testo.append(f"CF: {fattura.cliente.codice_fiscale}")
+        testo.append(f"{fattura.cliente.indirizzo}")
+        testo.append(f"{fattura.cliente.cap} {fattura.cliente.citta} ({fattura.cliente.provincia})")
+        testo.append("")
+        testo.append("=" * 32)
+        testo.append("DETTAGLIO ARTICOLI:")
+        testo.append("=" * 32)
 
-        # Righe fattura MINI
+        # Righe fattura con TUTTI i dettagli
         for riga in fattura.righe:
-            testo.append(f"{riga.quantita:.0f}x {riga.descrizione[:15]}")
-            testo.append(f"   €{riga.totale_riga:.2f}")
+            testo.append("")
+            testo.append(f"{riga.quantita:.0f}x {riga.descrizione}")
+            testo.append(f"  Prezzo unit: €{riga.prezzo_unitario:.2f}")
+            testo.append(f"  Totale: €{riga.totale_riga:.2f}")
+            testo.append(f"  IVA: {riga.aliquota_iva:.0f}%")
 
-        testo.append("-" * 16)
-        testo.append(f"Imp  €{fattura.imponibile:.2f}")
-        testo.append(f"IVA  €{fattura.iva:.2f}")
-        testo.append(f"TOT  €{fattura.totale:.2f}")
-        testo.append("=" * 16)
+        testo.append("")
+        testo.append("=" * 32)
+        testo.append("TOTALI:")
+        testo.append(f"Imponibile: €{fattura.imponibile:.2f}")
+        testo.append(f"IVA:        €{fattura.iva:.2f}")
+        testo.append(f"TOTALE:     €{fattura.totale:.2f}")
+        testo.append("=" * 32)
+        testo.append("")
+        testo.append("Documento fiscale valido ai fini IVA")
+        testo.append("File XML generato per invio SDI")
+        testo.append("")
 
         return "\n".join(testo)
 

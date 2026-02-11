@@ -1672,7 +1672,7 @@ def create_nota_credito(id):
         return jsonify({'error': str(e)}), 500
 
 def genera_testo_fattura(fattura):
-    """Genera il testo formattato COMPATTO della fattura per la stampa"""
+    """Genera il testo formattato ULTRA-COMPATTO della fattura per la stampa"""
     try:
         from backend.fatture.config_cedente import DATI_CEDENTE
 
@@ -1682,42 +1682,34 @@ def genera_testo_fattura(fattura):
         else:
             nome_cliente = f"{fattura.cliente.nome} {fattura.cliente.cognome}"
 
-        # Costruisci testo fattura COMPATTO
+        # Costruisci testo fattura ULTRA-COMPATTO
         testo = []
-        testo.append("=" * 32)
-        testo.append("    FATTURA ELETTRONICA")
-        testo.append("=" * 32)
-        testo.append(f"N. {fattura.anno}/{fattura.numero} - {fattura.data_emissione.strftime('%d/%m/%Y')}")
-        testo.append("-" * 32)
-        testo.append("CEDENTE:")
+        testo.append("=" * 24)
+        testo.append("  FATTURA ELETTRONICA")
+        testo.append(f"N.{fattura.anno}/{fattura.numero} {fattura.data_emissione.strftime('%d/%m/%Y')}")
+        testo.append("-" * 24)
         testo.append(DATI_CEDENTE['denominazione'])
         testo.append(f"P.IVA {DATI_CEDENTE['partita_iva']}")
-        testo.append(f"{DATI_CEDENTE['indirizzo']}")
-        testo.append(f"{DATI_CEDENTE['cap']} {DATI_CEDENTE['citta']} ({DATI_CEDENTE['provincia']})")
-        testo.append("-" * 32)
-        testo.append("CLIENTE:")
+        testo.append(f"{DATI_CEDENTE['cap']} {DATI_CEDENTE['citta']}")
+        testo.append("-" * 24)
         testo.append(nome_cliente)
         if fattura.cliente.partita_iva:
             testo.append(f"P.IVA {fattura.cliente.partita_iva}")
         testo.append(f"CF {fattura.cliente.codice_fiscale}")
-        testo.append(f"{fattura.cliente.indirizzo}")
-        testo.append(f"{fattura.cliente.cap} {fattura.cliente.citta} ({fattura.cliente.provincia})")
-        testo.append("-" * 32)
-        testo.append("DETTAGLIO:")
+        testo.append(f"{fattura.cliente.cap} {fattura.cliente.citta}")
+        testo.append("-" * 24)
 
-        # Righe fattura COMPATTE
+        # Righe fattura ULTRA-COMPATTE
         for riga in fattura.righe:
-            testo.append(f"{riga.quantita:.0f}x {riga.descrizione}")
-            testo.append(f"  €{riga.prezzo_unitario:.2f} x {riga.quantita:.0f} = €{riga.totale_riga:.2f} (IVA {riga.aliquota_iva:.0f}%)")
+            testo.append(f"{riga.quantita:.0f}x {riga.descrizione} €{riga.totale_riga:.2f}")
 
-        testo.append("-" * 32)
-        testo.append(f"Imponibile:    €{fattura.imponibile:.2f}")
-        testo.append(f"IVA:           €{fattura.iva:.2f}")
-        testo.append(f"TOTALE:        €{fattura.totale:.2f}")
-        testo.append("=" * 32)
-        testo.append("Doc. fiscale valido ai fini IVA")
-        testo.append("XML generato per invio SDI")
-        testo.append("=" * 32)
+        testo.append("-" * 24)
+        testo.append(f"Imponibile  €{fattura.imponibile:.2f}")
+        testo.append(f"IVA         €{fattura.iva:.2f}")
+        testo.append(f"TOTALE      €{fattura.totale:.2f}")
+        testo.append("=" * 24)
+        testo.append("Doc. fiscale IVA")
+        testo.append("=" * 24)
 
         return "\n".join(testo)
 

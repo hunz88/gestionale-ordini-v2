@@ -210,11 +210,37 @@ class RigaFattura(db.Model):
     descrizione = db.Column(db.String(500), nullable=False)
     quantita = db.Column(db.Float, nullable=False, default=1)
     prezzo_unitario = db.Column(db.Float, nullable=False)
-    aliquota_iva = db.Column(db.Float, nullable=False, default=22)  # 4, 10, 22
+    aliquota_iva = db.Column(db.Float, nullable=False, default=10)  # BAR/SOMMINISTRAZIONE = 10%, Altri: 4, 22
     totale_riga = db.Column(db.Float, nullable=False)
 
     # Relazione
     fattura = db.relationship('Fattura', backref='righe')
+
+class Cedente(db.Model):
+    """Dati del cedente/prestatore (la tua azienda) - Modificabili da interfaccia"""
+    __tablename__ = 'cedente'
+    id = db.Column(db.Integer, primary_key=True)
+
+    # Dati fiscali
+    partita_iva = db.Column(db.String(13), nullable=False)  # ITxxxxxxxxxxx
+    codice_fiscale = db.Column(db.String(16), nullable=False)
+    denominazione = db.Column(db.String(200), nullable=False)
+    regime_fiscale = db.Column(db.String(10), default='RF01')  # RF01=ordinario, RF19=forfettario
+
+    # Indirizzo
+    indirizzo = db.Column(db.String(200), nullable=False)
+    cap = db.Column(db.String(5), nullable=False)
+    citta = db.Column(db.String(100), nullable=False)
+    provincia = db.Column(db.String(2), nullable=False)
+    nazione = db.Column(db.String(2), default='IT')
+
+    # Contatti
+    telefono = db.Column(db.String(20))
+    email = db.Column(db.String(200))
+
+    # Timestamp
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 # ══════════════════════════════════════════════════════════════════════════════
 # AUTH
@@ -1535,7 +1561,7 @@ def create_fattura_da_ordine():
         for idx, item in enumerate(items, start=1):
             qty = item.get('qty', 1)
             prezzo_unit = item.get('prezzo', 0)
-            aliquota = item.get('aliquota_iva', 22)  # Default 22%
+            aliquota = item.get('aliquota_iva', 10)  # BAR/SOMMINISTRAZIONE = 10%
 
             totale_riga = qty * prezzo_unit
             iva_riga = totale_riga * (aliquota / 100)
@@ -1674,7 +1700,21 @@ def create_nota_credito(id):
 def genera_testo_fattura(fattura):
     """Genera il testo COMPLETO della fattura per la stampa (font piccoli gestiti da print_job.py)"""
     try:
-        from backend.fatture.config_cedente import DATI_CEDENTE
+        # Leggi dati cedente dal database (o fallback a config)
+        cedente = Cedente.query.first()
+        if not cedente:
+            # Fallback a config_cedente.py se non ancora migrato
+            from backend.fatture.config_cedente import DATI_CEDENTE
+            dati_cedente = DATI_CEDENTE
+        else:
+            dati_cedente = {
+                'denominazione': cedente.denominazione,
+                'partita_iva': cedente.partita_iva,
+                'indirizzo': cedente.indirizzo,
+                'cap': cedente.cap,
+                'citta': cedente.citta,
+                'provincia': cedente.provincia
+            }
 
         # Nome cliente
         if fattura.cliente.ragione_sociale:
@@ -1691,10 +1731,10 @@ def genera_testo_fattura(fattura):
         testo.append("=" * 32)
         testo.append("")
         testo.append("CEDENTE / PRESTATORE:")
-        testo.append(DATI_CEDENTE['denominazione'])
-        testo.append(f"P.IVA: {DATI_CEDENTE['partita_iva']}")
-        testo.append(f"{DATI_CEDENTE['indirizzo']}")
-        testo.append(f"{DATI_CEDENTE['cap']} {DATI_CEDENTE['citta']} ({DATI_CEDENTE['provincia']})")
+        testo.append(dati_cedente['denominazione'])
+        testo.append(f"P.IVA: {dati_cedente['partita_iva']}")
+        testo.append(f"{dati_cedente['indirizzo']}")
+        testo.append(f"{dati_cedente['cap']} {dati_cedente['citta']} ({dati_cedente['provincia']})")
         testo.append("")
         testo.append("CLIENTE:")
         testo.append(nome_cliente)
@@ -1791,8 +1831,26 @@ def emetti_fattura(id):
                 'totale_riga': r.totale_riga
             })
 
-        # Genera XML
-        generatore = FatturaElettronicaXML()
+        # Genera XML con dati cedente dal database
+        cedente = Cedente.query.first()
+        if cedente:
+            dati_cedente_dict = {
+                'partita_iva': cedente.partita_iva,
+                'codice_fiscale': cedente.codice_fiscale,
+                'denominazione': cedente.denominazione,
+                'regime_fiscale': cedente.regime_fiscale,
+                'indirizzo': cedente.indirizzo,
+                'cap': cedente.cap,
+                'citta': cedente.citta,
+                'provincia': cedente.provincia,
+                'nazione': cedente.nazione,
+                'telefono': cedente.telefono,
+                'email': cedente.email
+            }
+            generatore = FatturaElettronicaXML(dati_cedente=dati_cedente_dict)
+        else:
+            generatore = FatturaElettronicaXML()  # Usa config_cedente.py come fallback
+
         percorso_xml = generatore.genera_xml(dati_fattura, dati_cliente, righe_xml)
 
         # Aggiorna fattura
@@ -1955,7 +2013,7 @@ def update_fattura(id):
             for idx, item in enumerate(data['items'], 1):
                 prezzo_unitario = float(item['prezzo'])
                 quantita = float(item.get('qty', 1))
-                aliquota_iva = float(item.get('aliquota_iva', 22))
+                aliquota_iva = float(item.get('aliquota_iva', 10))  # BAR/SOMMINISTRAZIONE = 10%
 
                 # Calcola imponibile e IVA
                 totale_riga_lordo = prezzo_unitario * quantita
@@ -1998,13 +2056,125 @@ def update_fattura(id):
 
 @app.route("/api/fatture/config", methods=["GET"])
 def get_config_fatture():
-    """Ritorna configurazione cedente per il frontend"""
+    """Ritorna configurazione cedente per il frontend (LEGACY - usa /api/cedente)"""
     try:
-        from backend.fatture.fattura_elettronica import FatturaElettronicaXML
-        gen = FatturaElettronicaXML()
-        return jsonify(gen.CEDENTE)
+        # Leggi dal database
+        cedente = Cedente.query.first()
+        if cedente:
+            return jsonify({
+                'partita_iva': cedente.partita_iva,
+                'codice_fiscale': cedente.codice_fiscale,
+                'denominazione': cedente.denominazione,
+                'regime_fiscale': cedente.regime_fiscale,
+                'indirizzo': cedente.indirizzo,
+                'cap': cedente.cap,
+                'citta': cedente.citta,
+                'provincia': cedente.provincia,
+                'nazione': cedente.nazione,
+                'telefono': cedente.telefono,
+                'email': cedente.email
+            })
+        else:
+            # Fallback a config_cedente.py se non ancora migrato
+            from backend.fatture.fattura_elettronica import FatturaElettronicaXML
+            gen = FatturaElettronicaXML()
+            return jsonify(gen.CEDENTE)
     except Exception as e:
         logging.error(f"Errore get_config_fatture: {e}")
+        return jsonify({'error': str(e)}), 500
+
+# ══════════════════════════════════════════════════════════════════════════════
+# API CEDENTE (DATI SOCIETÀ)
+# ══════════════════════════════════════════════════════════════════════════════
+@app.route("/api/cedente", methods=["GET"])
+def get_cedente():
+    """Recupera i dati del cedente (tua società)"""
+    try:
+        cedente = Cedente.query.first()
+
+        # Se non esiste, inizializza da config_cedente.py
+        if not cedente:
+            from backend.fatture.config_cedente import DATI_CEDENTE
+            cedente = Cedente(
+                partita_iva=DATI_CEDENTE['partita_iva'],
+                codice_fiscale=DATI_CEDENTE['codice_fiscale'],
+                denominazione=DATI_CEDENTE['denominazione'],
+                regime_fiscale=DATI_CEDENTE['regime_fiscale'],
+                indirizzo=DATI_CEDENTE['indirizzo'],
+                cap=DATI_CEDENTE['cap'],
+                citta=DATI_CEDENTE['citta'],
+                provincia=DATI_CEDENTE['provincia'],
+                nazione=DATI_CEDENTE.get('nazione', 'IT'),
+                telefono=DATI_CEDENTE.get('telefono'),
+                email=DATI_CEDENTE.get('email')
+            )
+            db.session.add(cedente)
+            db.session.commit()
+
+        return jsonify({
+            'id': cedente.id,
+            'partita_iva': cedente.partita_iva,
+            'codice_fiscale': cedente.codice_fiscale,
+            'denominazione': cedente.denominazione,
+            'regime_fiscale': cedente.regime_fiscale,
+            'indirizzo': cedente.indirizzo,
+            'cap': cedente.cap,
+            'citta': cedente.citta,
+            'provincia': cedente.provincia,
+            'nazione': cedente.nazione,
+            'telefono': cedente.telefono,
+            'email': cedente.email
+        })
+    except Exception as e:
+        logging.error(f"Errore get_cedente: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route("/api/cedente", methods=["PUT"])
+def update_cedente():
+    """Aggiorna i dati del cedente (tua società)"""
+    try:
+        data = request.json
+        cedente = Cedente.query.first()
+
+        if not cedente:
+            return jsonify({'error': 'Cedente non trovato. Accedi prima alla pagina per inizializzarlo.'}), 404
+
+        # Aggiorna campi
+        cedente.partita_iva = data.get('partita_iva', cedente.partita_iva)
+        cedente.codice_fiscale = data.get('codice_fiscale', cedente.codice_fiscale)
+        cedente.denominazione = data.get('denominazione', cedente.denominazione)
+        cedente.regime_fiscale = data.get('regime_fiscale', cedente.regime_fiscale)
+        cedente.indirizzo = data.get('indirizzo', cedente.indirizzo)
+        cedente.cap = data.get('cap', cedente.cap)
+        cedente.citta = data.get('citta', cedente.citta)
+        cedente.provincia = data.get('provincia', cedente.provincia)
+        cedente.nazione = data.get('nazione', cedente.nazione)
+        cedente.telefono = data.get('telefono', cedente.telefono)
+        cedente.email = data.get('email', cedente.email)
+        cedente.updated_at = datetime.utcnow()
+
+        db.session.commit()
+
+        return jsonify({
+            'message': 'Dati società aggiornati con successo',
+            'cedente': {
+                'id': cedente.id,
+                'partita_iva': cedente.partita_iva,
+                'codice_fiscale': cedente.codice_fiscale,
+                'denominazione': cedente.denominazione,
+                'regime_fiscale': cedente.regime_fiscale,
+                'indirizzo': cedente.indirizzo,
+                'cap': cedente.cap,
+                'citta': cedente.citta,
+                'provincia': cedente.provincia,
+                'nazione': cedente.nazione,
+                'telefono': cedente.telefono,
+                'email': cedente.email
+            }
+        })
+    except Exception as e:
+        db.session.rollback()
+        logging.error(f"Errore update_cedente: {e}")
         return jsonify({'error': str(e)}), 500
 
 # FILE STATICI

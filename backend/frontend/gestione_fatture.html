@@ -403,6 +403,7 @@
   <div class="tabs">
     <button class="tab active" onclick="switchTab('clienti')">👥 Clienti</button>
     <button class="tab" onclick="switchTab('fatture')">📄 Fatture</button>
+    <button class="tab" onclick="switchTab('societa')">🏢 Dati Società</button>
   </div>
 
   <!-- TAB CLIENTI -->
@@ -434,6 +435,102 @@
     </div>
 
     <div id="fattureList"></div>
+  </div>
+
+  <!-- TAB DATI SOCIETÀ -->
+  <div id="tab-societa" class="tab-content">
+    <div style="max-width: 800px; margin: 0 auto">
+      <h2>🏢 Dati della Tua Società</h2>
+      <p style="color: #666; margin-bottom: 2rem">
+        Questi dati appariranno nelle fatture elettroniche inviate all'Agenzia delle Entrate.
+        Assicurati che siano corretti e aggiornati!
+      </p>
+
+      <div id="alertContainerSocieta"></div>
+
+      <form id="formSocieta" onsubmit="return saveSocieta(event)">
+        <div class="form-section">
+          <h3>📋 Dati Fiscali</h3>
+
+          <label>Partita IVA *</label>
+          <input type="text" id="societa_partita_iva" required maxlength="13"
+                 placeholder="IT12345678901" pattern="IT[0-9]{11}">
+          <small>Formato: IT + 11 cifre (es: IT12345678901)</small>
+
+          <label>Codice Fiscale *</label>
+          <input type="text" id="societa_codice_fiscale" required maxlength="16"
+                 placeholder="Se diverso dalla P.IVA">
+
+          <label>Denominazione / Ragione Sociale *</label>
+          <input type="text" id="societa_denominazione" required maxlength="200"
+                 placeholder="SUNSET BAR S.R.L.">
+
+          <label>Regime Fiscale *</label>
+          <select id="societa_regime_fiscale" required>
+            <option value="RF01">RF01 - Regime ordinario</option>
+            <option value="RF19">RF19 - Regime forfettario</option>
+            <option value="RF02">RF02 - Contribuenti minimi</option>
+            <option value="RF04">RF04 - Agricoltura e pesca</option>
+            <option value="RF05">RF05 - Vendita sali e tabacchi</option>
+            <option value="RF10">RF10 - Intrattenimenti e giochi</option>
+            <option value="RF11">RF11 - Agenzie viaggi</option>
+            <option value="RF12">RF12 - Agriturismo</option>
+            <option value="RF17">RF17 - IVA per cassa</option>
+            <option value="RF18">RF18 - Altro</option>
+          </select>
+          <small>RF01 = ordinario, RF19 = forfettario (più comuni)</small>
+        </div>
+
+        <div class="form-section">
+          <h3>📍 Indirizzo Sede Legale</h3>
+
+          <label>Indirizzo Completo *</label>
+          <input type="text" id="societa_indirizzo" required maxlength="200"
+                 placeholder="Via Roma, 123">
+
+          <div style="display: grid; grid-template-columns: 1fr 2fr 1fr; gap: 1rem">
+            <div>
+              <label>CAP *</label>
+              <input type="text" id="societa_cap" required pattern="[0-9]{5}" maxlength="5"
+                     placeholder="00100">
+            </div>
+            <div>
+              <label>Città *</label>
+              <input type="text" id="societa_citta" required maxlength="100"
+                     placeholder="Roma">
+            </div>
+            <div>
+              <label>Provincia *</label>
+              <input type="text" id="societa_provincia" required pattern="[A-Z]{2}"
+                     maxlength="2" placeholder="RM" style="text-transform: uppercase">
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h3>📞 Contatti (Opzionali)</h3>
+
+          <label>Telefono</label>
+          <input type="text" id="societa_telefono" maxlength="20"
+                 placeholder="+39 06 12345678">
+
+          <label>Email</label>
+          <input type="email" id="societa_email" maxlength="200"
+                 placeholder="info@sunsetbar.it">
+        </div>
+
+        <div style="text-align: center; margin-top: 2rem">
+          <button type="submit" class="btn btn-success" style="font-size: 1.2rem; padding: 1rem 3rem">
+            💾 Salva Dati Società
+          </button>
+        </div>
+      </form>
+
+      <div style="margin-top: 2rem; padding: 1rem; background: #fff3cd; border-radius: 0.5rem; border-left: 4px solid #ffc107">
+        <strong>⚠️ Importante:</strong> Le modifiche saranno applicate immediatamente alle nuove fatture.
+        Le fatture già emesse manterranno i dati originali.
+      </div>
+    </div>
   </div>
 
   <!-- MODAL CLIENTE -->
@@ -652,6 +749,8 @@
         loadClienti();
       } else if (tabName === 'fatture') {
         loadFatture();
+      } else if (tabName === 'societa') {
+        loadSocieta();
       }
     }
 
@@ -1162,7 +1261,7 @@
         </div>
         <div class="form-group" style="margin-bottom:0;flex:0 0 80px">
           <label>IVA %</label>
-          <input type="number" class="riga-iva" value="${rigaData?.aliquota_iva || 22}" step="1" required>
+          <input type="number" class="riga-iva" value="${rigaData?.aliquota_iva || 10}" step="1" required>
         </div>
         <button type="button" class="btn btn-danger btn-sm" onclick="removeRigaEdit(${idx})" style="height:38px">🗑️</button>
       `;
@@ -1272,6 +1371,82 @@
     function formatDate(dateStr) {
       const d = new Date(dateStr);
       return d.toLocaleDateString('it-IT');
+    }
+
+    // ======================== DATI SOCIETÀ ========================
+    async function loadSocieta() {
+      try {
+        const res = await fetch('/api/cedente');
+        if (!res.ok) throw new Error('Errore caricamento dati società');
+
+        const data = await res.json();
+
+        // Popola form
+        document.getElementById('societa_partita_iva').value = data.partita_iva || '';
+        document.getElementById('societa_codice_fiscale').value = data.codice_fiscale || '';
+        document.getElementById('societa_denominazione').value = data.denominazione || '';
+        document.getElementById('societa_regime_fiscale').value = data.regime_fiscale || 'RF01';
+        document.getElementById('societa_indirizzo').value = data.indirizzo || '';
+        document.getElementById('societa_cap').value = data.cap || '';
+        document.getElementById('societa_citta').value = data.citta || '';
+        document.getElementById('societa_provincia').value = data.provincia || '';
+        document.getElementById('societa_telefono').value = data.telefono || '';
+        document.getElementById('societa_email').value = data.email || '';
+      } catch (err) {
+        console.error('Errore loadSocieta:', err);
+        showAlertSocieta('danger', 'Errore caricamento dati società: ' + err.message);
+      }
+    }
+
+    async function saveSocieta(event) {
+      event.preventDefault();
+
+      const data = {
+        partita_iva: document.getElementById('societa_partita_iva').value,
+        codice_fiscale: document.getElementById('societa_codice_fiscale').value,
+        denominazione: document.getElementById('societa_denominazione').value,
+        regime_fiscale: document.getElementById('societa_regime_fiscale').value,
+        indirizzo: document.getElementById('societa_indirizzo').value,
+        cap: document.getElementById('societa_cap').value,
+        citta: document.getElementById('societa_citta').value,
+        provincia: document.getElementById('societa_provincia').value.toUpperCase(),
+        nazione: 'IT',
+        telefono: document.getElementById('societa_telefono').value,
+        email: document.getElementById('societa_email').value
+      };
+
+      try {
+        const res = await fetch('/api/cedente', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.error || 'Errore salvataggio');
+        }
+
+        showAlertSocieta('success', '✅ Dati società aggiornati con successo!');
+
+        // Ricarica dopo 1 secondo per mostrare il messaggio
+        setTimeout(() => loadSocieta(), 1000);
+      } catch (err) {
+        console.error('Errore saveSocieta:', err);
+        showAlertSocieta('danger', '❌ Errore: ' + err.message);
+      }
+    }
+
+    function showAlertSocieta(type, message) {
+      const container = document.getElementById('alertContainerSocieta');
+      const alert = document.createElement('div');
+      alert.className = `alert alert-${type}`;
+      alert.textContent = message;
+      container.innerHTML = '';
+      container.appendChild(alert);
+
+      // Auto-dismiss dopo 5 secondi
+      setTimeout(() => alert.remove(), 5000);
     }
 
     // ======================== INIT ========================

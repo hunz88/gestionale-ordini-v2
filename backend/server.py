@@ -1672,7 +1672,7 @@ def create_nota_credito(id):
         return jsonify({'error': str(e)}), 500
 
 def genera_testo_fattura(fattura):
-    """Genera il testo formattato ULTRA-COMPATTO della fattura per la stampa"""
+    """Genera il testo formattato MINI della fattura per la stampa"""
     try:
         from backend.fatture.config_cedente import DATI_CEDENTE
 
@@ -1682,34 +1682,29 @@ def genera_testo_fattura(fattura):
         else:
             nome_cliente = f"{fattura.cliente.nome} {fattura.cliente.cognome}"
 
-        # Costruisci testo fattura ULTRA-COMPATTO
+        # Costruisci testo fattura MINI
         testo = []
-        testo.append("=" * 24)
-        testo.append("  FATTURA ELETTRONICA")
-        testo.append(f"N.{fattura.anno}/{fattura.numero} {fattura.data_emissione.strftime('%d/%m/%Y')}")
-        testo.append("-" * 24)
-        testo.append(DATI_CEDENTE['denominazione'])
+        testo.append("=" * 16)
+        testo.append(f"FATT {fattura.anno}/{fattura.numero}")
+        testo.append(fattura.data_emissione.strftime('%d/%m/%Y'))
+        testo.append("-" * 16)
+        testo.append(DATI_CEDENTE['denominazione'][:20])
         testo.append(f"P.IVA {DATI_CEDENTE['partita_iva']}")
-        testo.append(f"{DATI_CEDENTE['cap']} {DATI_CEDENTE['citta']}")
-        testo.append("-" * 24)
-        testo.append(nome_cliente)
-        if fattura.cliente.partita_iva:
-            testo.append(f"P.IVA {fattura.cliente.partita_iva}")
+        testo.append("-" * 16)
+        testo.append(nome_cliente[:25])
         testo.append(f"CF {fattura.cliente.codice_fiscale}")
-        testo.append(f"{fattura.cliente.cap} {fattura.cliente.citta}")
-        testo.append("-" * 24)
+        testo.append("-" * 16)
 
-        # Righe fattura ULTRA-COMPATTE
+        # Righe fattura MINI
         for riga in fattura.righe:
-            testo.append(f"{riga.quantita:.0f}x {riga.descrizione} €{riga.totale_riga:.2f}")
+            testo.append(f"{riga.quantita:.0f}x {riga.descrizione[:15]}")
+            testo.append(f"   €{riga.totale_riga:.2f}")
 
-        testo.append("-" * 24)
-        testo.append(f"Imponibile  €{fattura.imponibile:.2f}")
-        testo.append(f"IVA         €{fattura.iva:.2f}")
-        testo.append(f"TOTALE      €{fattura.totale:.2f}")
-        testo.append("=" * 24)
-        testo.append("Doc. fiscale IVA")
-        testo.append("=" * 24)
+        testo.append("-" * 16)
+        testo.append(f"Imp  €{fattura.imponibile:.2f}")
+        testo.append(f"IVA  €{fattura.iva:.2f}")
+        testo.append(f"TOT  €{fattura.totale:.2f}")
+        testo.append("=" * 16)
 
         return "\n".join(testo)
 

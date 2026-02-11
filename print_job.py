@@ -31,6 +31,10 @@ MAX_WIDTH = 512
 TITLE_PTS = 90
 BODY_PTS = 48
 
+# Font piccoli per fatture
+FATTURA_TITLE_PTS = 32
+FATTURA_BODY_PTS = 20
+
 # Lista font possibili
 FONT_PATHS = [
     "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
@@ -252,8 +256,38 @@ def raw_print(tavolo: str, testo: str) -> bool:
         logging.info(f"Stampante: {PRINTER_NAME}")
         logging.info(f"Connessione: {PRINTER_IP}:{PRINTER_PORT}")
         logging.info(f"Tavolo: {tavolo}")
-        
-        # Categorizza gli items
+
+        # Rileva se è una fattura
+        is_fattura = "FATT" in testo[:50] or "FATTURA" in testo[:50]
+
+        if is_fattura:
+            # STAMPA FATTURA CON FONT PICCOLI
+            logging.info("🧾 Rilevata FATTURA - uso font piccoli")
+            p = Network(PRINTER_IP, PRINTER_PORT, timeout=10)
+            p.hw('init')
+
+            for line in testo.splitlines():
+                if line.strip():
+                    # Usa font piccoli per fatture
+                    if "FATT" in line or "===" in line:
+                        img = _make_img(line, FATTURA_TITLE_PTS)
+                    else:
+                        img = _make_img(line, FATTURA_BODY_PTS)
+
+                    buf = io.BytesIO()
+                    img.save(buf, format="PNG")
+                    buf.seek(0)
+                    p.image(buf)
+                else:
+                    p.text("\n")
+
+            p.text("\n\n\n")
+            p.cut(feed=True)
+            p.close()
+            logging.info("✓ Fattura stampata con font piccoli")
+            return True
+
+        # Categorizza gli items (solo per comande normali)
         bevande, cucina, altro = categorizza_items(testo)
         
         logging.info(f"Bevande trovate: {len(bevande)}")

@@ -1,0 +1,218 @@
+{% extends "base.html" %}
+
+{% block title %}Nuovo Progetto - Alkemy Print Hub{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">
+            <i class="bi bi-plus-circle text-alkemy-orange"></i>
+            Nuovo Progetto
+        </h1>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8 mx-auto">
+        <!-- Project Form -->
+        <form method="POST" enctype="multipart/form-data" id="projectForm">
+            <div class="card bg-alkemy-card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-file-earmark-text"></i> Dettagli Progetto
+                    </h5>
+                </div>
+                <div class="card-body">
+
+                    <div class="mb-3">
+                        <label class="form-label">Titolo Progetto *</label>
+                        <input type="text" class="form-control" name="title" id="projectTitle" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Cliente</label>
+                        <input type="text" class="form-control" name="customer_name" id="customerName">
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Tipo Stampante *</label>
+                            <select class="form-select" name="printer_type" id="printerType" required>
+                                <option value="">Seleziona...</option>
+                                <option value="3d_bambu">Bambu Lab P1S (3D)</option>
+                                <option value="3d_flashforge">Flashforge M5 (3D)</option>
+                                <option value="laser_xtool">xTool M1 Ultra (Laser)</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Materiale</label>
+                            <select class="form-select" name="material_id" id="materialId">
+                                <option value="">Seleziona...</option>
+                                {% for material in materials %}
+                                <option value="{{ material.id }}"
+                                        data-compatible="{{ material.printer_compatible }}"
+                                        data-cost-kg="{{ material.cost_per_kg or 0 }}"
+                                        data-cost-sheet="{{ material.cost_per_sheet or 0 }}">
+                                    {{ material.name }} ({{ material.color or 'N/D' }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Quantità</label>
+                            <input type="number" class="form-control" name="quantity" id="quantity" value="1" min="1">
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Tempo Stimato (ore)</label>
+                            <input type="number" class="form-control" name="estimated_time_hours"
+                                   id="estimatedTime" step="0.1" min="0" value="1.0">
+                        </div>
+                    </div>
+
+                    <div class="alert alert-secondary" id="costPreview">
+                        <strong>Anteprima Costi:</strong><br>
+                        Materiale: € <span id="materialCostPreview">0.00</span><br>
+                        Lavoro: € <span id="laborCostPreview">0.00</span><br>
+                        <strong>Prezzo Finale: € <span id="finalPricePreview">0.00</span></strong>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Files Upload - TUTTI I TIPI -->
+            <div class="card bg-alkemy-card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-files"></i> Carica File Progetto (Opzionale)
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">
+                            📎 Carica TUTTI i file necessari
+                            <small class="text-muted d-block mt-1">
+                                Foto, PDF, CAD (STL/OBJ/DXF/G-code), Office (Excel/Word), ZIP - NESSUN LIMITE!
+                            </small>
+                        </label>
+                        <input type="file" class="form-control" name="project_files" id="projectFiles" multiple
+                               accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.csv,.stl,.obj,.step,.stp,.dxf,.dwg,.gcode,.svg,.zip,.rar,.txt">
+                    </div>
+                    <div id="filesList" class="mt-3"></div>
+                </div>
+            </div>
+
+            <!-- Submit -->
+            <div class="d-grid gap-2 mb-4">
+                <button type="submit" class="btn btn-alkemy-orange btn-lg">
+                    <i class="bi bi-check-circle"></i> Crea Progetto
+                </button>
+                <a href="{{ url_for('dashboard') }}" class="btn btn-outline-light">
+                    <i class="bi bi-x-circle"></i> Annulla
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Filter materials by printer type
+document.getElementById('printerType').addEventListener('change', function() {
+    const printerType = this.value;
+    const materialSelect = document.getElementById('materialId');
+    const options = materialSelect.querySelectorAll('option');
+
+    options.forEach(option => {
+        if (!option.value) return;
+
+        const compatible = option.dataset.compatible;
+        if (!compatible || compatible.includes(printerType)) {
+            option.style.display = 'block';
+        } else {
+            option.style.display = 'none';
+            if (option.selected) {
+                materialSelect.value = '';
+            }
+        }
+    });
+
+    updateCostPreview();
+});
+
+// Update cost preview
+function updateCostPreview() {
+    const quantity = parseInt(document.getElementById('quantity').value) || 1;
+    const hours = parseFloat(document.getElementById('estimatedTime').value) || 0;
+    const materialSelect = document.getElementById('materialId');
+    const selectedOption = materialSelect.options[materialSelect.selectedIndex];
+
+    const hourlyRate = 15; // Default, could be fetched from settings
+    const marginPct = 30; // Default
+
+    let materialCost = 0;
+    if (selectedOption && selectedOption.value) {
+        const costKg = parseFloat(selectedOption.dataset.costKg) || 0;
+        const costSheet = parseFloat(selectedOption.dataset.costSheet) || 0;
+
+        if (costKg > 0) {
+            materialCost = costKg * 0.05 * quantity; // ~50g per piece
+        } else if (costSheet > 0) {
+            materialCost = costSheet * quantity;
+        }
+    }
+
+    const laborCost = hours * hourlyRate;
+    const subtotal = materialCost + laborCost;
+    const finalPrice = subtotal * (1 + marginPct / 100);
+
+    document.getElementById('materialCostPreview').textContent = materialCost.toFixed(2);
+    document.getElementById('laborCostPreview').textContent = laborCost.toFixed(2);
+    document.getElementById('finalPricePreview').textContent = finalPrice.toFixed(2);
+}
+
+// Update cost on changes
+document.getElementById('quantity').addEventListener('input', updateCostPreview);
+document.getElementById('estimatedTime').addEventListener('input', updateCostPreview);
+document.getElementById('materialId').addEventListener('change', updateCostPreview);
+
+// Initialize
+updateCostPreview();
+
+// File upload preview
+document.getElementById('projectFiles').addEventListener('change', function(e) {
+    const filesList = document.getElementById('filesList');
+    filesList.innerHTML = '';
+
+    if (this.files.length > 0) {
+        filesList.innerHTML = '<h6 class="mb-3"><i class="bi bi-paperclip"></i> File selezionati (' + this.files.length + '):</h6><ul class="list-group">';
+        for (let file of this.files) {
+            const size = (file.size / 1024 / 1024).toFixed(2);
+            const icon = getFileIcon(file.name);
+            filesList.innerHTML += `
+                <li class="list-group-item bg-dark d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-${icon}"></i> ${file.name}</span>
+                    <span class="badge bg-secondary">${size} MB</span>
+                </li>`;
+        }
+        filesList.innerHTML += '</ul>';
+    }
+});
+
+function getFileIcon(filename) {
+    const ext = filename.split('.').pop().toLowerCase();
+    const icons = {
+        'pdf': 'file-pdf', 'doc': 'file-word', 'docx': 'file-word',
+        'xls': 'file-excel', 'xlsx': 'file-excel', 'csv': 'file-excel',
+        'zip': 'file-zip', 'rar': 'file-zip', '7z': 'file-zip',
+        'jpg': 'file-image', 'jpeg': 'file-image', 'png': 'file-image', 'gif': 'file-image',
+        'stl': 'box', 'obj': 'box', 'gcode': 'code-square', 'dxf': 'vector-pen', 'svg': 'vector-pen'
+    };
+    return icons[ext] || 'file-earmark';
+}
+</script>
+{% endblock %}

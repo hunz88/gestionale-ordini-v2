@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  alkemy-print-hub:
+    build: .
+    container_name: alkemy-print-hub
+    ports:
+      - "5321:5321"
+    volumes:
+      - ./data:/app/data
+      - ./static/uploads:/app/static/uploads
+    environment:
+      - FLASK_ENV=production
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - SECRET_KEY=${SECRET_KEY}
+      - HOURLY_LABOR_RATE=${HOURLY_LABOR_RATE:-15.0}
+      - DEFAULT_MARGIN_PERCENTAGE=${DEFAULT_MARGIN_PERCENTAGE:-30.0}
+    restart: unless-stopped
+    networks:
+      - alkemy-network
+
+networks:
+  alkemy-network:
+    driver: bridge

@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+
+{% block title %}Storico - Alkemy Print Hub{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">
+            <i class="bi bi-clock-history text-alkemy-orange"></i>
+            Storico Progetti
+        </h1>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card bg-alkemy-card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-funnel"></i> Filtri Ricerca</h5>
+            </div>
+            <div class="card-body">
+                <form method="GET" id="filterForm">
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label">Cliente</label>
+                            <input type="text" class="form-control" name="customer" value="{{ request.args.get('customer', '') }}">
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label">Stato</label>
+                            <select class="form-select" name="status">
+                                <option value="">Tutti</option>
+                                <option value="quote" {% if request.args.get('status') == 'quote' %}selected{% endif %}>Quote</option>
+                                <option value="designing" {% if request.args.get('status') == 'designing' %}selected{% endif %}>Designing</option>
+                                <option value="printing" {% if request.args.get('status') == 'printing' %}selected{% endif %}>Printing</option>
+                                <option value="completed" {% if request.args.get('status') == 'completed' %}selected{% endif %}>Completed</option>
+                                <option value="failed" {% if request.args.get('status') == 'failed' %}selected{% endif %}>Failed</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label">Stampante</label>
+                            <select class="form-select" name="printer_type">
+                                <option value="">Tutte</option>
+                                <option value="3d_bambu" {% if request.args.get('printer_type') == '3d_bambu' %}selected{% endif %}>Bambu P1S</option>
+                                <option value="3d_flashforge" {% if request.args.get('printer_type') == '3d_flashforge' %}selected{% endif %}>Flashforge M5</option>
+                                <option value="laser_xtool" {% if request.args.get('printer_type') == 'laser_xtool' %}selected{% endif %}>xTool M1</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label">&nbsp;</label>
+                            <div class="d-grid gap-2">
+                                <button type="submit" class="btn btn-alkemy-orange">
+                                    <i class="bi bi-search"></i> Cerca
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mt-1">
+                        <div class="col-md-4">
+                            <label class="form-label">Data Da</label>
+                            <input type="date" class="form-control" name="date_from" value="{{ request.args.get('date_from', '') }}">
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">Data A</label>
+                            <input type="date" class="form-control" name="date_to" value="{{ request.args.get('date_to', '') }}">
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">&nbsp;</label>
+                            <a href="{{ url_for('history') }}" class="btn btn-outline-light w-100">
+                                <i class="bi bi-x-circle"></i> Reset Filtri
+                            </a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Statistics -->
+<div class="row g-3 mb-4">
+    <div class="col-md-6">
+        <div class="card bg-alkemy-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-1">Totale Guadagni</h6>
+                        <h2 class="mb-0 text-success">€ {{ "%.2f"|format(total_earnings) }}</h2>
+                    </div>
+                    <div class="stat-icon bg-success">
+                        <i class="bi bi-cash-coin"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card bg-alkemy-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-1">Totale Progetti</h6>
+                        <h2 class="mb-0">{{ total_projects }}</h2>
+                    </div>
+                    <div class="stat-icon bg-info">
+                        <i class="bi bi-bar-chart-fill"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Projects List -->
+<div class="row">
+    <div class="col-12">
+        <div class="card bg-alkemy-card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-list-ul"></i> Progetti ({{ projects|length }})</h5>
+                <button class="btn btn-sm btn-outline-light">
+                    <i class="bi bi-download"></i> Esporta CSV
+                </button>
+            </div>
+            <div class="card-body p-0">
+                {% if projects %}
+                <div class="table-responsive">
+                    <table class="table table-dark table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Titolo</th>
+                                <th>Cliente</th>
+                                <th>Stampante</th>
+                                <th>Stato</th>
+                                <th>Data</th>
+                                <th class="text-end">Prezzo</th>
+                                <th>Azioni</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for project in projects %}
+                            <tr>
+                                <td>#{{ project.id }}</td>
+                                <td>{{ project.title[:40] }}...</td>
+                                <td>{{ project.customer_name or 'N/D' }}</td>
+                                <td>
+                                    {% if project.printer_type == '3d_bambu' %}Bambu
+                                    {% elif project.printer_type == '3d_flashforge' %}Flashforge
+                                    {% else %}xTool{% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge
+                                        {% if project.status == 'quote' %}bg-secondary
+                                        {% elif project.status == 'designing' %}bg-info
+                                        {% elif project.status == 'printing' %}bg-warning
+                                        {% elif project.status == 'completed' %}bg-success
+                                        {% else %}bg-danger{% endif %}">
+                                        {{ project.status }}
+                                    </span>
+                                </td>
+                                <td>{{ project.created_at.strftime('%d/%m/%Y') }}</td>
+                                <td class="text-end">€ {{ "%.2f"|format(project.final_price) }}</td>
+                                <td>
+                                    <a href="{{ url_for('project_detail', project_id=project.id) }}" class="btn btn-sm btn-outline-light">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5 text-muted">
+                    <i class="bi bi-inbox" style="font-size: 3rem;"></i>
+                    <p class="mt-3">Nessun progetto trovato con i filtri selezionati.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

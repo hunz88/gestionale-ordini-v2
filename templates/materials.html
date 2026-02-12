@@ -1,0 +1,270 @@
+{% extends "base.html" %}
+
+{% block title %}Materiali - Alkemy Print Hub{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1>
+                <i class="bi bi-box-seam text-alkemy-orange"></i>
+                Gestione Materiali
+            </h1>
+            <button class="btn btn-alkemy-orange" data-bs-toggle="modal" data-bs-target="#newMaterialModal">
+                <i class="bi bi-plus-circle"></i> Nuovo Materiale
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Materials List -->
+<div class="row">
+    {% for material in materials %}
+    <div class="col-lg-6 mb-3">
+        <div class="card bg-alkemy-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="flex-grow-1">
+                        <h5 class="card-title mb-1">
+                            {{ material.name }}
+                            <span class="badge bg-secondary ms-2">{{ material.type.upper() }}</span>
+                        </h5>
+                        <p class="text-muted small mb-2">
+                            {% if material.color %}
+                            <i class="bi bi-palette"></i> {{ material.color }}
+                            {% endif %}
+                            <span class="ms-2">
+                                <i class="bi bi-upc"></i> {{ material.qr_code }}
+                            </span>
+                        </p>
+
+                        <!-- Stock Progress -->
+                        <div class="mb-2">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <small>Stock:</small>
+                                <small>
+                                    {{ "%.2f"|format(material.current_stock_kg) }} /
+                                    {{ "%.2f"|format(material.initial_stock_kg) }}
+                                    {% if 'laser' in material.type %}pz{% else %}kg{% endif %}
+                                </small>
+                            </div>
+                            <div class="progress" style="height: 12px;">
+                                <div class="progress-bar bg-{{ material.stock_status() }}"
+                                     style="width: {{ material.stock_percentage() }}%">
+                                    {{ "%.0f"|format(material.stock_percentage()) }}%
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Costs -->
+                        <div class="row g-2 small">
+                            {% if material.cost_per_kg %}
+                            <div class="col-6">
+                                <i class="bi bi-currency-euro"></i> {{ "%.2f"|format(material.cost_per_kg) }}/kg
+                            </div>
+                            {% endif %}
+                            {% if material.cost_per_sheet %}
+                            <div class="col-6">
+                                <i class="bi bi-currency-euro"></i> {{ "%.2f"|format(material.cost_per_sheet) }}/foglio
+                            </div>
+                            {% endif %}
+                            {% if material.optimal_temp %}
+                            <div class="col-6">
+                                <i class="bi bi-thermometer-half"></i> {{ material.optimal_temp }}°C
+                            </div>
+                            {% endif %}
+                            {% if material.optimal_speed %}
+                            <div class="col-6">
+                                <i class="bi bi-speedometer"></i> {{ material.optimal_speed }} mm/s
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        {% if material.voice_notes %}
+                        <div class="alert alert-info small mt-2 mb-0">
+                            <i class="bi bi-mic"></i> {{ material.voice_notes }}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="text-end">
+                        <button class="btn btn-sm btn-outline-light mb-1"
+                                data-bs-toggle="modal"
+                                data-bs-target="#updateStockModal"
+                                data-material-id="{{ material.id }}"
+                                data-material-name="{{ material.name }}"
+                                data-current-stock="{{ material.current_stock_kg }}">
+                            <i class="bi bi-pencil"></i> Stock
+                        </button>
+                        <br>
+                        <form method="POST" action="{{ url_for('delete_material', material_id=material.id) }}"
+                              style="display: inline;"
+                              onsubmit="return confirm('Sei sicuro di voler eliminare {{ material.name }}? Questa azione NON può essere annullata!');">
+                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                <i class="bi bi-trash"></i> Elimina
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Compatible Printers -->
+                <div class="mt-2">
+                    <small class="text-muted">
+                        <i class="bi bi-printer"></i> Compatibile:
+                        {% if 'bambu' in material.printer_compatible %}
+                        <span class="badge bg-dark">Bambu</span>
+                        {% endif %}
+                        {% if 'flashforge' in material.printer_compatible %}
+                        <span class="badge bg-dark">Flashforge</span>
+                        {% endif %}
+                        {% if 'laser' in material.printer_compatible %}
+                        <span class="badge bg-dark">Laser</span>
+                        {% endif %}
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- New Material Modal -->
+<div class="modal fade" id="newMaterialModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content bg-dark">
+            <div class="modal-header">
+                <h5 class="modal-title">Nuovo Materiale</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('new_material') }}">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Nome *</label>
+                        <input type="text" class="form-control" name="name" required>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Tipo *</label>
+                            <select class="form-select" name="type" required>
+                                <option value="pla">PLA</option>
+                                <option value="petg">PETG</option>
+                                <option value="abs">ABS</option>
+                                <option value="tpu">TPU</option>
+                                <option value="resin">Resin</option>
+                                <option value="wood_laser">Legno (Laser)</option>
+                                <option value="acrylic_laser">Acrilico (Laser)</option>
+                                <option value="metal_laser">Metallo (Laser)</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Colore</label>
+                            <input type="text" class="form-control" name="color">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Compatibilità Stampanti</label>
+                        <select class="form-select" name="printer_compatible" multiple>
+                            <option value="3d_bambu">Bambu Lab P1S</option>
+                            <option value="3d_flashforge">Flashforge M5</option>
+                            <option value="laser_xtool">xTool M1 Ultra</option>
+                        </select>
+                        <small class="text-muted">Tieni premuto Ctrl/Cmd per selezioni multiple</small>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Costo per Kg (3D)</label>
+                            <input type="number" class="form-control" name="cost_per_kg" step="0.01">
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Costo per Foglio (Laser)</label>
+                            <input type="number" class="form-control" name="cost_per_sheet" step="0.01">
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Stock Iniziale</label>
+                            <input type="number" class="form-control" name="current_stock_kg" step="0.01" value="1.0">
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Temp. Ottimale (°C)</label>
+                            <input type="number" class="form-control" name="optimal_temp">
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Velocità (mm/s)</label>
+                            <input type="number" class="form-control" name="optimal_speed">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+                    <button type="submit" class="btn btn-alkemy-orange">Salva Materiale</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Update Stock Modal -->
+<div class="modal fade" id="updateStockModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content bg-dark">
+            <div class="modal-header">
+                <h5 class="modal-title">Aggiorna Stock</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" id="updateStockForm">
+                <div class="modal-body">
+                    <p>Materiale: <strong id="updateMaterialName"></strong></p>
+                    <div class="mb-3">
+                        <label class="form-label">Stock Attuale</label>
+                        <input type="number" class="form-control" name="current_stock_kg" id="updateCurrentStock" step="0.01" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+                    <button type="submit" class="btn btn-alkemy-orange">Aggiorna</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Update Stock Modal
+const updateStockModal = document.getElementById('updateStockModal');
+updateStockModal.addEventListener('show.bs.modal', function(event) {
+    const button = event.relatedTarget;
+    const materialId = button.getAttribute('data-material-id');
+    const materialName = button.getAttribute('data-material-name');
+    const currentStock = button.getAttribute('data-current-stock');
+
+    document.getElementById('updateMaterialName').textContent = materialName;
+    document.getElementById('updateCurrentStock').value = currentStock;
+    document.getElementById('updateStockForm').action = `/materials/${materialId}/update`;
+});
+
+// Handle multi-select for printer compatibility
+document.querySelector('select[name="printer_compatible"]').addEventListener('change', function() {
+    const selected = Array.from(this.selectedOptions).map(opt => opt.value);
+    // Create hidden input with comma-separated values
+    let hiddenInput = this.form.querySelector('input[name="printer_compatible"]');
+    if (!hiddenInput) {
+        hiddenInput = document.createElement('input');
+        hiddenInput.type = 'hidden';
+        hiddenInput.name = 'printer_compatible';
+        this.form.appendChild(hiddenInput);
+    }
+    hiddenInput.value = selected.join(',');
+});
+</script>
+{% endblock %}
